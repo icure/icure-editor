@@ -142,15 +142,44 @@ describe('item scopes', () => {
     expect(sameResolution(a, other)).toBe(false)
   })
 
-  it('cuts a list that holds itself at the nesting limit', () => {
+  it('tells a changed shape from an unchanged one when the items are the same objects', async () => {
+    const repeats = { 'programme.days': DAYS }
+    const a = await resolveDocument(nested, fakeProvider({ repeats }))
+    const sources = [{ key: 'programme.days', label: 'Days', itemFields: [{ key: 'day.label', label: 'Day' }], itemRepeats: [{ key: 'day.sessions', label: 'Sessions', itemFields: [{ key: 'session.room', label: 'Room' }] }] }]
+    const reshaped = await resolveDocument(nested, fakeProvider({ repeats, sources }))
+    expect(sameResolution(a, reshaped)).toBe(false)
+  })
+
+  it('cuts a list that holds itself at its first recurrence, however many items it has', () => {
     const cyclic: { items: object[] } = { items: [] }
-    cyclic.items.push({ name: 'x', self: cyclic })
-    let context = toItemContext({ list: cyclic as never })
+    for (let i = 0; i < 10; i++) cyclic.items.push({ name: 'x' + i, self: cyclic })
+    const start = performance.now()
+    const context = toItemContext({ list: cyclic as never })
+    expect(performance.now() - start).toBeLessThan(500)
+    const list = context.lists.get('list')!
+    expect(list.items).toHaveLength(10)
+    for (const item of list.items) expect(item.lists.has('self')).toBe(false)
+  })
+
+  it('cuts genuinely deep data at the nesting limit', () => {
+    let deepest: { items: object[] } = { items: [{ name: 'leaf' }] }
+    for (let i = 0; i < MAX_REPEAT_NESTING + 4; i++) deepest = { items: [{ name: 'n' + i, down: deepest }] }
+    let context = toItemContext({ list: deepest as never })
     let depth = 0
-    while (context.lists.get(depth === 0 ? 'list' : 'self')?.items[0]) {
-      context = context.lists.get(depth === 0 ? 'list' : 'self')!.items[0]!
+    while (context.lists.get(depth === 0 ? 'list' : 'down')?.items[0]) {
+      context = context.lists.get(depth === 0 ? 'list' : 'down')!.items[0]!
       depth++
     }
     expect(depth).toBe(MAX_REPEAT_NESTING)
+  })
+
+  it('resolves a source that lists itself, with many entries, quickly', async () => {
+    const source: { key: string; label: string; itemFields: { key: string; label: string }[]; itemRepeats: unknown[] } = { key: 'list', label: 'List', itemFields: [{ key: 'item.name', label: 'Name' }], itemRepeats: [] }
+    for (let i = 0; i < 10; i++) source.itemRepeats.push(source)
+    const document = doc(page(repeat('list', paragraph(field('item.name')))))
+    const start = performance.now()
+    const resolution = await resolveDocument(document, fakeProvider({ sources: [source as never], repeats: { list: { items: [{ 'item.name': 'A' }] } } }))
+    expect(performance.now() - start).toBeLessThan(500)
+    expect(resolution.unresolved).toEqual([])
   })
 })

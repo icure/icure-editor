@@ -79,31 +79,35 @@ const mergeShape = (into: Map<string, RepeatShape>, key: string, shape: RepeatSh
   into.set(key, found ? { itemFields: new Set([...found.itemFields, ...shape.itemFields]), itemRepeats: new Set([...found.itemRepeats, ...shape.itemRepeats]) } : { itemFields: shape.itemFields, itemRepeats: shape.itemRepeats })
 }
 
-// The descriptors' shapes, nested sources included (flattened by key).
-function descriptorShapes(list: readonly RepeatSourceDescriptor[], into = new Map<string, RepeatShape>(), depth = 0): Map<string, RepeatShape> {
+// The descriptors' shapes, nested sources included (flattened by key). A descriptor already on the
+// current path is skipped: a source may list itself, and breadth would explode before the depth cut.
+function descriptorShapes(list: readonly RepeatSourceDescriptor[], into = new Map<string, RepeatShape>(), depth = 0, path: ReadonlySet<RepeatSourceDescriptor> = new Set()): Map<string, RepeatShape> {
   if (depth > MAX_REPEAT_NESTING) return into
   for (const d of list) {
+    if (path.has(d)) continue
     mergeShape(into, d.key, { itemFields: new Set(d.itemFields.map((f) => f.key)), itemRepeats: new Set((d.itemRepeats ?? []).map((r) => r.key)) })
-    descriptorShapes(d.itemRepeats ?? [], into, depth + 1)
+    descriptorShapes(d.itemRepeats ?? [], into, depth + 1, new Set(path).add(d))
   }
   return into
 }
 
-export function toItemContext(values: ItemValues, shapes: ReadonlyMap<string, RepeatShape> = new Map(), depth = 0): ItemContext {
+// `path` holds the lists enclosing these values: a list that holds itself is cut at its first recurrence.
+export function toItemContext(values: ItemValues, shapes: ReadonlyMap<string, RepeatShape> = new Map(), depth = 0, path: ReadonlySet<RepeatData> = new Set()): ItemContext {
   const entries = values instanceof Map ? [...values.entries()] : Object.entries(values)
   const texts = new Map<string, string>()
   const lists = new Map<string, ResolvedRepeat>()
   for (const [key, value] of entries) {
     if (text(value)) texts.set(String(key), value as string)
-    // A list deeper than MAX_REPEAT_NESTING is dropped: the host's data may hold itself.
-    else if (isRepeatData(value) && depth < MAX_REPEAT_NESTING) lists.set(String(key), normaliseRepeat(value, shapes, String(key), depth + 1))
+    // A list on its own path, or deeper than MAX_REPEAT_NESTING, is dropped: the host's data may hold itself.
+    else if (isRepeatData(value) && depth < MAX_REPEAT_NESTING && !path.has(value)) lists.set(String(key), normaliseRepeat(value, shapes, String(key), depth + 1, path))
   }
   return { values: texts, lists }
 }
 
-function normaliseRepeat(data: RepeatData, shapes: ReadonlyMap<string, RepeatShape>, source: string, depth = 0): ResolvedRepeat {
+function normaliseRepeat(data: RepeatData, shapes: ReadonlyMap<string, RepeatShape>, source: string, depth = 0, path: ReadonlySet<RepeatData> = new Set()): ResolvedRepeat {
   const declared = shapes.get(source)
-  const items = (Array.isArray(data.items) ? data.items : []).map((values) => toItemContext(values, shapes, depth))
+  const here = new Set(path).add(data)
+  const items = (Array.isArray(data.items) ? data.items : []).map((values) => toItemContext(values, shapes, depth, here))
   const itemFields = data.itemFields ? new Set(data.itemFields) : (declared?.itemFields ?? new Set(items.flatMap((item) => [...item.values.keys()].map((key) => key.split(':')[0]!))))
   const itemRepeats = new Set([...(data.itemRepeats ?? []), ...(declared?.itemRepeats ?? []), ...items.flatMap((item) => [...item.lists.keys()])])
   const nested = new Map<string, RepeatShape>()

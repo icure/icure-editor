@@ -59,17 +59,19 @@ function expandTable(table: ProseNode, items: readonly ItemContext[], env: Env):
 // The blocks a repeating block draws.
 function renderRepeat(repeat: ProseNode, env: Env): ProseNode[] {
   const source = String(repeat.attrs.source)
+  // Until zones are drawn: a block's blocks are its body's.
+  const body = repeat.child(repeat.childCount === 1 ? 0 : repeat.child(0).type === nodes.repeat_header ? 1 : 0)
   const data = env.resolution.repeats.get(source)
   const itemFields = data?.itemFields ?? env.resolution.itemFieldsOf.get(source) ?? new Set<string>()
   // Shown as written: with expressions, and in the editor while the block is unresolved.
   if (env.mode === 'expressions' || (env.mode === 'editor' && !data)) {
-    return childrenOf(repeat).flatMap((block) => renderNode(block, { ...env, mode: 'expressions', item: null, itemFields }))
+    return childrenOf(body).flatMap((block) => renderNode(block, { ...env, mode: 'expressions', item: null, itemFields }))
   }
   const items = data?.items ?? []
   const inner: Env = { ...env, itemFields }
-  const only = repeat.childCount === 1 ? repeat.child(0) : null
+  const only = body.childCount === 1 ? body.child(0) : null
   if (only?.type === nodes.table) return expandTable(only, items, inner)
-  return items.flatMap((item) => childrenOf(repeat).flatMap((block) => renderNode(block, { ...inner, item })))
+  return items.flatMap((item) => childrenOf(body).flatMap((block) => renderNode(block, { ...inner, item })))
 }
 
 // Why an embed can't be drawn here, or null.

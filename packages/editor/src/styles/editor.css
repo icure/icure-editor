@@ -31,6 +31,7 @@
   --ie-radius-pill: 999px;
   --ie-control: 2.75rem;
   --ie-icon-size: 1.125rem;
+  --ie-inline-action-size: var(--ie-control);
   --ie-page-width: 210mm;
   --ie-page-aspect: 210 / 297;
   --ie-page-margin: 20mm;
@@ -124,6 +125,7 @@
 @media (hover: hover) and (pointer: fine) {
   .ie-editor {
     --ie-control: 2rem;
+    --ie-inline-action-size: 1.75rem;
   }
 }
 
@@ -543,14 +545,37 @@
 
 .ie-inline-bar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--ie-space-xs) var(--ie-space-sm);
   padding: var(--ie-space-xs) var(--ie-space-sm);
   background: var(--ie-bar-surface);
   color: var(--ie-bar-ink);
   font-family: var(--ie-font);
   font-size: var(--ie-font-size);
+}
+
+/* Title, hint and alert wrap on the left; Done and Cancel stay at the top right. */
+.ie-inline-heading {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ie-space-xs) var(--ie-space-sm);
+  min-inline-size: 0;
+}
+
+/* The template question (text buttons) goes under the heading, on the right. */
+.ie-inline-bar:has(.ie-inline-question) {
+  flex-wrap: wrap;
+}
+
+.ie-inline-bar:has(.ie-inline-question) .ie-inline-heading {
+  flex-basis: 100%;
+}
+
+.ie-inline-bar:has(.ie-inline-question) .ie-inline-actions {
+  flex: 1 1 auto;
+  justify-content: flex-end;
 }
 
 .ie-inline-title {
@@ -577,6 +602,29 @@
   flex-wrap: wrap;
   gap: var(--ie-space-xs);
   margin-inline-start: auto;
+}
+
+.ie-inline-actions {
+  flex: none;
+}
+
+/* Done (✓) and Cancel (×): small squares at the top right of the bar. */
+.ie-inline-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--ie-inline-action-size);
+  block-size: var(--ie-inline-action-size);
+  min-inline-size: 0;
+  min-block-size: 0;
+  padding: 0;
+}
+
+/* Their tooltips open towards the bar, not past the area's edge. */
+.ie-inline-actions .ie-tooltip {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+  transform: none;
 }
 
 .ie-inline .ie-button:focus-visible {

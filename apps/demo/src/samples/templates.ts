@@ -1,5 +1,5 @@
 // The demo's sample templates (fictitious content). `embeddable` ones are offered by "Insert template".
-import { bold, doc, embed, field, fieldRow, h, headerRow, image, p, pAligned, repeat, SMALL, STRONG, table, text, withMarks } from './build.ts'
+import { bold, doc, embed, field, fieldRow, footerRow, h, headerRow, image, p, pAligned, repeat, SMALL, STRONG, table, text, withMarks, zoned } from './build.ts'
 
 export interface SampleTemplate {
   readonly id: string
@@ -36,8 +36,19 @@ export const SAMPLE_TEMPLATES: readonly SampleTemplate[] = [
       h(1, text('Invoice '), field('invoice.number')),
       p(field('recipient.firstName'), text(' '), field('recipient.lastName'), text(' — '), field('date.today')),
       p(),
-      repeat('invoice.lines', table(headerRow('Description', 'Quantity', 'Amount'), fieldRow('line.description', 'line.quantity', 'line.amount'))),
-      pAligned('right', bold('Total: '), field('invoice.total')),
+      repeat('invoice.lines', table(headerRow('Description', 'Quantity', 'Amount'), fieldRow('line.description', 'line.quantity', 'line.amount'), footerRow([], [bold('Total')], [field('invoice.total')]))),
+      p(),
+      embed('footer'),
+    ]),
+  },
+  {
+    id: 'programme',
+    content: doc([
+      embed('letterhead'),
+      h(1, text('Open weekend programme')),
+      zoned('programme.days', {
+        body: [h(2, field('day.label')), zoned('day.sessions', { body: [p(text('– '), field('session.time'), text(' '), field('session.title'), text(' ('), field('day.label'), text(')'))], footer: [p(withMarks(field('day.note'), SMALL))] })],
+      }),
       p(),
       embed('footer'),
     ]),
@@ -62,8 +73,7 @@ export const SAMPLE_TEMPLATES: readonly SampleTemplate[] = [
     content: doc([
       h(2, text('A template with unresolved references')),
       p(text('Middle name: '), field('recipient.middleName')),
-      p(text('Waiting list:')),
-      repeat('waitlist.entries', p(text('– '), field('entry.name'))),
+      zoned('waitlist.entries', { header: [p(text('Waiting list:'))], body: [p(text('– '), field('entry.name'))] }),
       p(text('Unknown block:')),
       repeat('archive.items', p(field('item.name'))),
       p(text('A missing image: '), image('missing-image', 'Missing image')),

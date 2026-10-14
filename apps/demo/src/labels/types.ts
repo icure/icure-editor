@@ -20,6 +20,7 @@ export interface AppStrings {
   readonly downloadPdf: string
   readonly printPdf: string
   readonly readOnly: string
+  readonly waitlistHeader: string
   readonly fieldGroups: Readonly<Record<'recipient' | 'organisation' | 'sender' | 'document', string>>
   readonly fields: Readonly<Record<string, string>>
   readonly sources: Readonly<Record<string, string>>

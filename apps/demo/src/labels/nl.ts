@@ -67,6 +67,7 @@ export const nl: LabelSet = {
     downloadPdf: 'PDF downloaden',
     printPdf: 'Afdrukken',
     readOnly: 'Alleen lezen',
+    waitlistHeader: 'Wachtlijst:',
     fieldGroups: { recipient: 'Ontvanger', organisation: 'Organisatie', sender: 'Afzender', document: 'Document' },
     fields: {
       'recipient.title': 'Aanspreking',
@@ -90,8 +91,12 @@ export const nl: LabelSet = {
       'line.description': 'Omschrijving',
       'line.quantity': 'Aantal',
       'line.amount': 'Bedrag',
+      'day.label': 'Dag',
+      'day.note': 'Notitie van de dag',
+      'session.time': 'Uur',
+      'session.title': 'Sessie',
     },
-    sources: { 'events.upcoming': 'Komende evenementen', 'invoice.lines': 'Factuurregels', 'waitlist.entries': 'Wachtlijst' },
-    templateNames: { 'welcome-letter': 'Welkomstbrief', invoice: 'Factuur', letterhead: 'Briefhoofd', signature: 'Handtekening', footer: 'Voettekst', problems: 'Onopgeloste verwijzingen', 'loop-a': 'Lus A', 'loop-b': 'Lus B', blank: 'Lege pagina' },
+    sources: { 'events.upcoming': 'Komende evenementen', 'invoice.lines': 'Factuurregels', 'waitlist.entries': 'Wachtlijst', 'programme.days': 'Dagen van het programma', 'day.sessions': 'Sessies van de dag' },
+    templateNames: { 'welcome-letter': 'Welkomstbrief', invoice: 'Factuur', letterhead: 'Briefhoofd', signature: 'Handtekening', footer: 'Voettekst', problems: 'Onopgeloste verwijzingen', 'loop-a': 'Lus A', 'loop-b': 'Lus B', programme: 'Programma open weekend', blank: 'Lege pagina' },
   },
 }

@@ -7,8 +7,9 @@ the document is shown or printed:
 
 - **fields**: a name (`recipient.lastName`) resolved to text, optionally qualified by a label
   (`preference.value:Newsletter`);
-- **repeating blocks**: content drawn once per item of a source (a line per item, or a table that
-  keeps its header row once and repeats its body rows);
+- **repeating blocks**: a header, a body and a footer; the body is drawn once per item of a source
+  (a line per item, or a table that keeps its header row once and repeats its body rows), and
+  items may hold lists of their own;
 - **embedded templates**: another template inlined by id, recursively, with cycle detection and a
   depth limit;
 - **images**: a reference to the host's image store, with alt text and a width.
@@ -104,9 +105,46 @@ interface ImageProvider {
 - Every method may answer synchronously or with a promise; a method that throws leaves its key
   unresolved (the editor never breaks on the host's errors).
 - Answers are cached per editor (`createResolver`); `editorRef.current.refresh()` forgets them.
-- Inside a repeating block, the fields named by the source's `itemFields` are read from the item;
-  every other field from the provider.
 - Labels of fields, sources and templates come from the provider, already in the user's language.
+
+### Repeating blocks
+
+A repeating block has three zones. The **header** and **footer** are drawn once, and still shown
+when the list is empty. The **body** is drawn once per item. A block whose source the provider
+can't resolve prints nothing (it is listed as unresolved); in the editor, a resolved empty list
+shows a "nothing to list" line between body and footer, never printed. When the body is a single
+table, its rows carry a zone (`table_row` attribute `zone`: `header` | `body` | `footer`): header
+rows are drawn once before, footer rows once after, and body rows once per item.
+
+**Scopes.** The body is filled in the item's scope, the header and footer in the enclosing scope.
+A field is read from the innermost scope whose source declares it (`itemFields`); if that item has
+no value for it, it is unresolved, with no fallback to an outer scope. A field no scope declares
+is a document field, asked of the provider.
+
+**Nested lists.** An item value is a text or a list (`ItemValue = string | RepeatData`). A source
+declares the lists its items hold in `itemRepeats` (nested descriptors), and its data names them
+in `RepeatData.itemRepeats`. A repeating block inside a body, whose source an enclosing item
+declares, reads that item's list: an absent list is an empty list, and the provider is never asked
+for it. Nesting is bounded by `MAX_REPEAT_NESTING` (8); deeper data is dropped.
+
+```ts
+const provider: EditorDataProvider = {
+  resolveField: () => undefined,
+  listRepeatSources: () => [{
+    key: 'days', label: 'Days', layout: 'table',
+    itemFields: [{ key: 'day.name', label: 'Day' }],
+    itemRepeats: [{ key: 'sessions', label: 'Sessions', itemFields: [{ key: 'session.title', label: 'Title' }] }],
+  }],
+  resolveRepeat: (source) => source === 'days'
+    ? { items: [
+        { 'day.name': 'Monday', sessions: { items: [{ 'session.title': 'Opening' }, { 'session.title': 'Workshop' }] } },
+        { 'day.name': 'Tuesday', sessions: { items: [] } },   // an empty nested list; a missing key means the same
+      ] }
+    : null,
+}
+```
+
+A `sessions` block placed in the body of a `days` block lists the sessions of each day.
 
 ## Labels and styling
 

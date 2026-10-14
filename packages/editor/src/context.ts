@@ -23,18 +23,24 @@ export interface RepeatSourceDescriptor {
   readonly key: string
   readonly label: string
   readonly itemFields: readonly ItemFieldDescriptor[]
+  // The lists one item holds, each a source of its own (a nested repeating block reads them).
+  readonly itemRepeats?: readonly RepeatSourceDescriptor[]
   readonly layout?: 'lines' | 'table'
 }
 
-// The values of one item: field key → text.
-export type ItemValues = Readonly<Record<string, string>> | ReadonlyMap<string, string>
+// One value of an item: a text, or a list the item holds (a nested repeating block reads it).
+export type ItemValue = string | RepeatData
+// The values of one item: key → text or list.
+export type ItemValues = Readonly<Record<string, ItemValue>> | ReadonlyMap<string, ItemValue>
 
-// The items of a repeating block. `itemFields` names the keys read from the item (default: those of
-// the matching descriptor, else every key any item holds). An empty `items` list is a resolved block
-// with nothing to list.
+// The items of a repeating block. `itemFields` names the text keys read from the item (default: those
+// of the matching descriptor, else every text key any item holds), and `itemRepeats` the list keys (the
+// sources of the lists an item holds; default: those of the descriptor, plus every list key found). An
+// empty `items` list is a resolved block with nothing to list.
 export interface RepeatData {
   readonly items: readonly ItemValues[]
   readonly itemFields?: readonly string[]
+  readonly itemRepeats?: readonly string[]
 }
 
 export interface TemplateSummary {

@@ -6,16 +6,25 @@ import type { Node as ProseNode } from 'prosemirror-model'
 import type { EditorDataProvider, ItemValues, RepeatData, RepeatSourceDescriptor, ResolvedImage, UnresolvedEntry, UnresolvedKind, UnresolvedReason } from './context.ts'
 import { fieldKey, imageKey, repeatKey, templateKey, toEditorDocument } from './document.ts'
 import { safeImageSrc, safeAltText } from './images.ts'
+import { bodyTable, declaringField, declaringRepeat, EMPTY_SHAPE, rowZone, scopeFor, zonesOf, type RepeatShape, type ShapeScope } from './repeat.ts'
 import { editorSchema } from './schema.ts'
 
 const { nodes } = editorSchema
 
-export type ItemContext = ReadonlyMap<string, string>
+// Deepest nesting of lists inside items; data holding itself is cut there.
+export const MAX_REPEAT_NESTING = 8
 
-export interface ResolvedRepeat {
+export interface ItemContext {
+  readonly values: ReadonlyMap<string, string>
+  readonly lists: ReadonlyMap<string, ResolvedRepeat>
+}
+
+// `itemFields` are the field names read from the item inside the block, `itemRepeats` the sources of
+// the lists an item holds.
+export interface ResolvedRepeat extends RepeatShape {
   readonly items: readonly ItemContext[]
-  // Field names read from the item inside the block.
-  readonly itemFields: ReadonlySet<string>
+  // The shapes of the lists its items hold, at every depth (merged across items).
+  readonly nested: ReadonlyMap<string, RepeatShape>
 }
 
 export interface ResolvedTemplate {
@@ -29,9 +38,10 @@ export interface Resolution {
   readonly repeats: ReadonlyMap<string, ResolvedRepeat>
   readonly templates: ReadonlyMap<string, ResolvedTemplate>
   readonly images: ReadonlyMap<string, ResolvedImage>
-  // Item fields of each known repeat source (from the descriptors), used even when the block
-  // itself is unresolved, so its item fields are never listed as fields of their own.
-  readonly itemFieldsOf: ReadonlyMap<string, ReadonlySet<string>>
+  // The shape of each known repeat source (from the descriptors, merged with the nested shapes of the
+  // resolved data), used even when the block itself is unresolved, so its item fields are never
+  // listed as fields of their own.
+  readonly shapes: ReadonlyMap<string, RepeatShape>
   // In reading order, once each.
   readonly unresolved: readonly UnresolvedEntry[]
   // The id of the document being edited, so that it can't embed itself.
@@ -46,7 +56,7 @@ export const EMPTY_RESOLUTION: Resolution = {
   repeats: new Map(),
   templates: new Map(),
   images: new Map(),
-  itemFieldsOf: new Map(),
+  shapes: new Map(),
   unresolved: [],
   rootId: null,
   maxDepth: DEFAULT_MAX_TEMPLATE_DEPTH,
@@ -62,16 +72,51 @@ export interface ResolveOptions {
 // Only non-blank strings count: an absent or blank value is unresolved.
 const text = (value: unknown): string | null => (typeof value === 'string' && value.trim().length > 0 ? value : null)
 
-export function toItemContext(values: ItemValues): ItemContext {
-  const entries = values instanceof Map ? [...values.entries()] : Object.entries(values)
-  return new Map(entries.flatMap(([key, value]) => (text(value) ? [[String(key), value as string] as const] : [])))
+const isRepeatData = (value: unknown): value is RepeatData => typeof value === 'object' && value !== null && Array.isArray((value as RepeatData).items)
+
+const mergeShape = (into: Map<string, RepeatShape>, key: string, shape: RepeatShape): void => {
+  const found = into.get(key)
+  into.set(key, found ? { itemFields: new Set([...found.itemFields, ...shape.itemFields]), itemRepeats: new Set([...found.itemRepeats, ...shape.itemRepeats]) } : { itemFields: shape.itemFields, itemRepeats: shape.itemRepeats })
 }
 
-function normaliseRepeat(data: RepeatData, descriptor: ReadonlySet<string> | undefined): ResolvedRepeat {
-  const items = (Array.isArray(data.items) ? data.items : []).map(toItemContext)
-  const itemFields = data.itemFields ? new Set(data.itemFields) : (descriptor ?? new Set(items.flatMap((item) => [...item.keys()].map((key) => key.split(':')[0]!))))
-  return { items, itemFields }
+// The descriptors' shapes, nested sources included (flattened by key).
+function descriptorShapes(list: readonly RepeatSourceDescriptor[], into = new Map<string, RepeatShape>(), depth = 0): Map<string, RepeatShape> {
+  if (depth > MAX_REPEAT_NESTING) return into
+  for (const d of list) {
+    mergeShape(into, d.key, { itemFields: new Set(d.itemFields.map((f) => f.key)), itemRepeats: new Set((d.itemRepeats ?? []).map((r) => r.key)) })
+    descriptorShapes(d.itemRepeats ?? [], into, depth + 1)
+  }
+  return into
 }
+
+export function toItemContext(values: ItemValues, shapes: ReadonlyMap<string, RepeatShape> = new Map(), depth = 0): ItemContext {
+  const entries = values instanceof Map ? [...values.entries()] : Object.entries(values)
+  const texts = new Map<string, string>()
+  const lists = new Map<string, ResolvedRepeat>()
+  for (const [key, value] of entries) {
+    if (text(value)) texts.set(String(key), value as string)
+    // A list deeper than MAX_REPEAT_NESTING is dropped: the host's data may hold itself.
+    else if (isRepeatData(value) && depth < MAX_REPEAT_NESTING) lists.set(String(key), normaliseRepeat(value, shapes, String(key), depth + 1))
+  }
+  return { values: texts, lists }
+}
+
+function normaliseRepeat(data: RepeatData, shapes: ReadonlyMap<string, RepeatShape>, source: string, depth = 0): ResolvedRepeat {
+  const declared = shapes.get(source)
+  const items = (Array.isArray(data.items) ? data.items : []).map((values) => toItemContext(values, shapes, depth))
+  const itemFields = data.itemFields ? new Set(data.itemFields) : (declared?.itemFields ?? new Set(items.flatMap((item) => [...item.values.keys()].map((key) => key.split(':')[0]!))))
+  const itemRepeats = new Set([...(data.itemRepeats ?? []), ...(declared?.itemRepeats ?? []), ...items.flatMap((item) => [...item.lists.keys()])])
+  const nested = new Map<string, RepeatShape>()
+  for (const item of items) {
+    for (const [key, list] of item.lists) {
+      mergeShape(nested, key, list)
+      for (const [deeper, shape] of list.nested) mergeShape(nested, deeper, shape)
+    }
+  }
+  return { items, itemFields, itemRepeats, nested }
+}
+
+const childrenOf = (node: ProseNode): ProseNode[] => Array.from({ length: node.childCount }, (_, i) => node.child(i))
 
 // A cache of provider answers, shared by successive resolutions of the same provider: typing in the
 // editor re-resolves the document without asking the provider again for keys it already answered.
@@ -81,8 +126,8 @@ export interface Resolver {
   clear(): void
 }
 
-interface Scope {
-  readonly itemFields: ReadonlySet<string> | null
+interface Walk {
+  readonly items: ShapeScope | null
   readonly stack: readonly string[]
   readonly depth: number
 }
@@ -96,7 +141,7 @@ export function createResolver(provider: EditorDataProvider, options: ResolveOpt
   let repeatCache = new Map<string, Promise<ResolvedRepeat | null>>()
   let templateCache = new Map<string, Promise<Loaded<ResolvedTemplate>>>()
   let imageCache = new Map<string, Promise<Loaded<ResolvedImage>>>()
-  let descriptors: Promise<ReadonlyMap<string, ReadonlySet<string>>> | null = null
+  let descriptors: Promise<ReadonlyMap<string, RepeatShape>> | null = null
 
   const memo = <T>(cache: Map<string, Promise<T>>, key: string, load: () => Promise<T>): Promise<T> => {
     let found = cache.get(key)
@@ -118,7 +163,7 @@ export function createResolver(provider: EditorDataProvider, options: ResolveOpt
   const loadDescriptors = () =>
     (descriptors ??= safely(async () => {
       const list: readonly RepeatSourceDescriptor[] = (await provider.listRepeatSources?.()) ?? []
-      return new Map(list.map((d) => [d.key, new Set(d.itemFields.map((f) => f.key))] as const))
+      return descriptorShapes(list)
     }, new Map()))
 
   const field = (key: string) => memo(fieldCache, key, () => safely(async () => text(await provider.resolveField(key)), null))
@@ -127,7 +172,7 @@ export function createResolver(provider: EditorDataProvider, options: ResolveOpt
     memo(repeatCache, source, () =>
       safely(async () => {
         const data = await provider.resolveRepeat?.(source)
-        return data ? normaliseRepeat(data, (await loadDescriptors()).get(source)) : null
+        return data ? normaliseRepeat(data, await loadDescriptors(), source) : null
       }, null),
     )
   const template = (id: string) =>
@@ -154,7 +199,7 @@ export function createResolver(provider: EditorDataProvider, options: ResolveOpt
     )
 
   async function resolve(doc: ProseNode): Promise<Resolution> {
-    const itemFieldsOf = await loadDescriptors()
+    const shapes = new Map(await loadDescriptors())
     const order: { key: string; kind: UnresolvedKind }[] = []
     const reasons = new Map<string, UnresolvedReason>()
     const fieldKeys = new Set<string>()
@@ -166,22 +211,17 @@ export function createResolver(provider: EditorDataProvider, options: ResolveOpt
       if (reason && !reasons.has(key)) reasons.set(key, reason)
     }
 
-    async function walk(node: ProseNode, scope: Scope): Promise<void> {
+    async function walk(node: ProseNode, scope: Walk): Promise<void> {
       for (let i = 0; i < node.childCount; i++) {
         const child = node.child(i)
         if (child.type === nodes.variable) {
           const name = String(child.attrs.name)
-          if (scope.itemFields?.has(name)) continue
+          if (declaringField(scope.items, name)) continue
           const key = fieldKey(name, child.attrs.label as string | null)
           fieldKeys.add(key)
           mark(key, 'field', null)
         } else if (child.type === nodes.repeat) {
-          const source = String(child.attrs.source)
-          const resolved = await repeat(source)
-          mark(repeatKey(source), 'repeat', resolved ? null : 'missing')
-          if (resolved) repeats.set(source, resolved)
-          const itemFields = resolved?.itemFields ?? itemFieldsOf.get(source) ?? new Set<string>()
-          await walk(child, { ...scope, itemFields })
+          await walkRepeat(child, scope)
         } else if (child.type === nodes.template_ref) {
           await embed(String(child.attrs.templateId), scope)
         } else if (child.type === nodes.image) {
@@ -195,7 +235,31 @@ export function createResolver(provider: EditorDataProvider, options: ResolveOpt
       }
     }
 
-    async function embed(id: string, scope: Scope): Promise<void> {
+    async function walkRepeat(node: ProseNode, scope: Walk): Promise<void> {
+      const source = String(node.attrs.source)
+      let shape: RepeatShape
+      if (declaringRepeat(scope.items, source)) {
+        // A list an enclosing item holds: never asked of the provider, never unresolved.
+        shape = shapes.get(source) ?? EMPTY_SHAPE
+      } else {
+        const resolved = await repeat(source)
+        mark(repeatKey(source), 'repeat', resolved ? null : 'missing')
+        if (resolved) {
+          repeats.set(source, resolved)
+          for (const [key, nestedShape] of resolved.nested) mergeShape(shapes, key, nestedShape)
+        }
+        shape = resolved ?? shapes.get(source) ?? EMPTY_SHAPE
+      }
+      const inner: Walk = { ...scope, items: { shape, parent: scope.items } }
+      const { header, body, footer } = zonesOf(node)
+      if (header) await walk(header, scope)
+      const table = bodyTable(body)
+      if (table) for (const row of childrenOf(table)) await walk(row, scopeFor(rowZone(row), scope, inner))
+      else await walk(body, inner)
+      if (footer) await walk(footer, scope)
+    }
+
+    async function embed(id: string, scope: Walk): Promise<void> {
       const key = templateKey(id)
       if (scope.stack.includes(id)) return mark(key, 'template', 'cycle')
       if (scope.depth >= maxDepth) return mark(key, 'template', 'depth')
@@ -203,10 +267,10 @@ export function createResolver(provider: EditorDataProvider, options: ResolveOpt
       mark(key, 'template', loaded.ok ? null : loaded.reason)
       if (!loaded.ok) return
       templates.set(id, loaded.value)
-      await walk(loaded.value.doc, { itemFields: scope.itemFields, stack: [...scope.stack, id], depth: scope.depth + 1 })
+      await walk(loaded.value.doc, { items: scope.items, stack: [...scope.stack, id], depth: scope.depth + 1 })
     }
 
-    await walk(doc, { itemFields: null, stack: rootId ? [rootId] : [], depth: 0 })
+    await walk(doc, { items: null, stack: rootId ? [rootId] : [], depth: 0 })
     const fields = new Map<string, string>()
     await Promise.all(
       [...fieldKeys].map(async (key) => {
@@ -222,7 +286,7 @@ export function createResolver(provider: EditorDataProvider, options: ResolveOpt
       seen.add(key)
       return [{ key, kind, reason }]
     })
-    return { fields, repeats, templates, images, itemFieldsOf, unresolved, rootId, maxDepth }
+    return { fields, repeats, templates, images, shapes, unresolved, rootId, maxDepth }
   }
 
   return {
@@ -251,7 +315,7 @@ export function sameResolution(a: Resolution, b: Resolution): boolean {
     sameMap(a.repeats, b.repeats) &&
     sameMap(a.templates, b.templates) &&
     sameMap(a.images, b.images) &&
-    sameMap(a.itemFieldsOf, b.itemFieldsOf) &&
+    sameMap(a.shapes, b.shapes) &&
     JSON.stringify(a.unresolved) === JSON.stringify(b.unresolved)
   )
 }

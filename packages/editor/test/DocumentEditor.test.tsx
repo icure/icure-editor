@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { EditorDataProvider } from '../src/context.ts'
 import { DocumentEditor, type DocumentEditorHandle } from '../src/react/DocumentEditor.tsx'
-import { docJson, embed, field, page, paragraph, PNG_DATA_URI, repeat, text } from './helpers.ts'
+import { DEFAULT_LABELS } from '../src/labels.ts'
+import { docJson, embed, field, page, paragraph, PNG_DATA_URI, repeat, text, zoned } from './helpers.ts'
 import { createRef } from 'react'
 
 const PNG_BYTES = Uint8Array.from(atob(PNG_DATA_URI.split(',')[1]!), (c) => c.charCodeAt(0))
@@ -136,5 +137,12 @@ describe('the document editor', () => {
   it('shows why content that does not fit the schema cannot be opened', () => {
     render(<DocumentEditor initial={{ type: 'doc', content: [{ type: 'script' }] }} provider={provider()} />)
     expect(screen.getByRole('alert')).toHaveTextContent('does not fit the editor schema')
+  })
+
+  it('shows the empty line of a resolved empty block between its body and its footer', async () => {
+    render(<DocumentEditor initial={docJson(page(zoned('list.items', { header: [paragraph(text('Head'))], body: [paragraph(field('item.name'))], footer: [paragraph(text('Foot'))] })))} provider={provider({ resolveRepeat: () => ({ items: [] }) })} />)
+    const block = await screen.findByText(DEFAULT_LABELS.repeatEmpty)
+    const lines = [...block.parentElement!.querySelectorAll('p')].map((p) => p.textContent)
+    expect(lines).toEqual(['Head', DEFAULT_LABELS.repeatEmpty, 'Foot'])
   })
 })

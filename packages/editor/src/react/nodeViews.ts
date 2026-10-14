@@ -8,7 +8,7 @@ import { fieldKey, imageKey, templateKey } from '../document.ts'
 import { clampImageWidth, safeAltText } from '../images.ts'
 import type { EditorLabels } from '../labels.ts'
 import { createSerializer } from '../output/html.ts'
-import { embedProblem, expression, renderBlocks } from '../render.ts'
+import { embedProblem, expression, renderBlocks, renderRepeatParts } from '../render.ts'
 import type { Resolution } from '../resolve.ts'
 import { EMBED_CLASS, FIELD_CLASS, IMAGE_CLASS, REPEAT_CLASS } from '../schema.ts'
 import { reflow } from '../pagination.ts'
@@ -31,14 +31,16 @@ function repeatView(node: ProseNode, { resolution, showExpressions, labels }: Vi
   const dom = document.createElement('div')
   dom.className = [REPEAT_CLASS, resolved ? null : UNRESOLVED_CLASS].filter(Boolean).join(' ')
   dom.dataset.repeat = source
-  const shown = renderBlocks(node, resolution, { mode: showExpressions ? 'expressions' : 'editor' })
-  if (shown.length > 0) dom.append(blocksDom(shown, resolution))
-  else {
+  const parts = renderRepeatParts(node, resolution, { mode: showExpressions ? 'expressions' : 'editor' })
+  const before = [...parts.header, ...parts.body]
+  if (before.length > 0) dom.append(blocksDom(before, resolution))
+  if (parts.empty) {
     const empty = document.createElement('p')
     empty.className = 'ie-repeat-empty'
     empty.textContent = labels.repeatEmpty
     dom.append(empty)
   }
+  if (parts.footer.length > 0) dom.append(blocksDom(parts.footer, resolution))
   // Drawn from the items: its content isn't edited in place.
   return { dom, ignoreMutation: () => true, stopEvent: () => false }
 }

@@ -112,13 +112,15 @@ interface ImageProvider {
 A repeating block has three zones. The **header** and **footer** are drawn once, and still shown
 when the list is empty. The **body** is drawn once per item. A block whose source the provider
 can't resolve prints nothing (it is listed as unresolved); in the editor, a resolved empty list
-shows a "nothing to list" line between body and footer, never printed. When the body is a single
+shows a "nothing to list" line between body and footer, never printed (for a body made of a single
+table, the line comes after the table, as its footer rows live inside it). When the body is a single
 table, its rows carry a zone (`table_row` attribute `zone`: `header` | `body` | `footer`): header
 rows are drawn once before, footer rows once after, and body rows once per item.
 
 **Scopes.** The body is filled in the item's scope, the header and footer in the enclosing scope.
 A field is read from the innermost scope whose source declares it (`itemFields`); if that item has
-no value for it, it is unresolved, with no fallback to an outer scope. A field no scope declares
+no value for it, it prints the missing-item value (blank in the output, "—" in the editor) and adds
+no unresolved entry, with no fallback to an outer scope. A field no scope declares
 is a document field, asked of the provider.
 
 **Nested lists.** An item value is a text or a list (`ItemValue = string | RepeatData`). A source
@@ -131,7 +133,7 @@ for it. Nesting is bounded by `MAX_REPEAT_NESTING` (8); deeper data is dropped.
 const provider: EditorDataProvider = {
   resolveField: () => undefined,
   listRepeatSources: () => [{
-    key: 'days', label: 'Days', layout: 'table',
+    key: 'days', label: 'Days', layout: 'lines',
     itemFields: [{ key: 'day.name', label: 'Day' }],
     itemRepeats: [{ key: 'sessions', label: 'Sessions', itemFields: [{ key: 'session.title', label: 'Title' }] }],
   }],

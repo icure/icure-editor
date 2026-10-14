@@ -41,6 +41,11 @@ function values(language: Language): Record<string, string> {
   }
 }
 
+// The first session of the programme and the note of its day (shared by the data and `SAMPLE`).
+const FIRST_SESSION = { time: '10:00', title: 'Opening of the doors' }
+const FIRST_DAY_NOTE = 'Free entry, no booking needed.'
+const dayLabel = (language: Language, day: number): string => new Intl.DateTimeFormat(LOCALES[language], { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(2026, 9, day))
+
 function repeats(language: Language): Record<string, RepeatData> {
   const date = (month: number, day: number) => new Intl.DateTimeFormat(LOCALES[language], { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(2026, month, day))
   const money = new Intl.NumberFormat(LOCALES[language], { style: 'currency', currency: 'EUR' })
@@ -60,6 +65,31 @@ function repeats(language: Language): Record<string, RepeatData> {
       ],
     },
     'waitlist.entries': { items: [] },
+    'programme.days': {
+      items: [
+        {
+          'day.label': dayLabel(language, 24),
+          'day.note': FIRST_DAY_NOTE,
+          'day.sessions': {
+            items: [
+              { 'session.time': FIRST_SESSION.time, 'session.title': FIRST_SESSION.title },
+              { 'session.time': '11:30', 'session.title': 'Garden tour' },
+              { 'session.time': '14:00', 'session.title': 'Pottery demonstration' },
+            ],
+          },
+        },
+        {
+          'day.label': dayLabel(language, 25),
+          'day.note': 'Bring your own mug for the café.',
+          'day.sessions': {
+            items: [
+              { 'session.time': '10:30', 'session.title': 'Family storytelling' },
+              { 'session.time': '15:00', 'session.title': 'Closing concert' },
+            ],
+          },
+        },
+      ],
+    },
   }
 }
 
@@ -80,6 +110,13 @@ export function createFakeProvider(language: Language, strings: AppStrings): Edi
     { key: 'events.upcoming', label: strings.sources['events.upcoming']!, layout: 'lines', itemFields: ['event.title', 'event.date'].map((key) => ({ key, label: strings.fields[key] ?? key })) },
     { key: 'invoice.lines', label: strings.sources['invoice.lines']!, layout: 'table', itemFields: ['line.description', 'line.quantity', 'line.amount'].map((key) => ({ key, label: strings.fields[key] ?? key })) },
     { key: 'waitlist.entries', label: strings.sources['waitlist.entries']!, layout: 'lines', itemFields: [{ key: 'entry.name', label: 'Name' }] },
+    {
+      key: 'programme.days',
+      label: strings.sources['programme.days']!,
+      layout: 'lines',
+      itemFields: ['day.label', 'day.note'].map((key) => ({ key, label: strings.fields[key] ?? key })),
+      itemRepeats: [{ key: 'day.sessions', label: strings.sources['day.sessions']!, itemFields: ['session.time', 'session.title'].map((key) => ({ key, label: strings.fields[key] ?? key })) }],
+    },
   ]
   return {
     listFields: () => fields,
@@ -105,4 +142,12 @@ export function createFakeProvider(language: Language, strings: AppStrings): Edi
       },
     },
   }
+}
+
+// The English sample values the e2e tests read (computed from the data, never retyped).
+export const SAMPLE = {
+  invoiceTotal: values('en')['invoice.total']!,
+  firstDay: dayLabel('en', 24),
+  firstSessionLine: `– ${FIRST_SESSION.time} ${FIRST_SESSION.title} (${dayLabel('en', 24)})`,
+  firstDayNote: FIRST_DAY_NOTE,
 }

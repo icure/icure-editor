@@ -19,6 +19,7 @@ export const en: LabelSet = {
     downloadPdf: 'Download PDF',
     printPdf: 'Print',
     readOnly: 'Read only',
+    waitlistHeader: 'Waiting list:',
     fieldGroups: { recipient: 'Recipient', organisation: 'Organisation', sender: 'Sender', document: 'Document' },
     fields: {
       'recipient.title': 'Title',
@@ -42,8 +43,12 @@ export const en: LabelSet = {
       'line.description': 'Description',
       'line.quantity': 'Quantity',
       'line.amount': 'Amount',
+      'day.label': 'Day',
+      'day.note': 'Day note',
+      'session.time': 'Time',
+      'session.title': 'Session',
     },
-    sources: { 'events.upcoming': 'Upcoming events', 'invoice.lines': 'Invoice lines', 'waitlist.entries': 'Waiting list' },
-    templateNames: { 'welcome-letter': 'Welcome letter', invoice: 'Invoice', letterhead: 'Letterhead', signature: 'Signature', footer: 'Footer', problems: 'Unresolved references', 'loop-a': 'Loop A', 'loop-b': 'Loop B', blank: 'Blank page' },
+    sources: { 'events.upcoming': 'Upcoming events', 'invoice.lines': 'Invoice lines', 'waitlist.entries': 'Waiting list', 'programme.days': 'Programme days', 'day.sessions': 'Day sessions' },
+    templateNames: { 'welcome-letter': 'Welcome letter', invoice: 'Invoice', letterhead: 'Letterhead', signature: 'Signature', footer: 'Footer', problems: 'Unresolved references', 'loop-a': 'Loop A', 'loop-b': 'Loop B', programme: 'Open weekend programme', blank: 'Blank page' },
   },
 }

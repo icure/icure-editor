@@ -67,6 +67,7 @@ export const fr: LabelSet = {
     downloadPdf: 'Télécharger le PDF',
     printPdf: 'Imprimer',
     readOnly: 'Lecture seule',
+    waitlistHeader: 'Liste d’attente :',
     fieldGroups: { recipient: 'Destinataire', organisation: 'Organisation', sender: 'Expéditeur', document: 'Document' },
     fields: {
       'recipient.title': 'Civilité',
@@ -90,8 +91,12 @@ export const fr: LabelSet = {
       'line.description': 'Description',
       'line.quantity': 'Quantité',
       'line.amount': 'Montant',
+      'day.label': 'Jour',
+      'day.note': 'Note du jour',
+      'session.time': 'Heure',
+      'session.title': 'Séance',
     },
-    sources: { 'events.upcoming': 'Événements à venir', 'invoice.lines': 'Lignes de facture', 'waitlist.entries': 'Liste d’attente' },
-    templateNames: { 'welcome-letter': 'Lettre de bienvenue', invoice: 'Facture', letterhead: 'En-tête', signature: 'Signature', footer: 'Pied de page', problems: 'Références non résolues', 'loop-a': 'Boucle A', 'loop-b': 'Boucle B', blank: 'Page vierge' },
+    sources: { 'events.upcoming': 'Événements à venir', 'invoice.lines': 'Lignes de facture', 'waitlist.entries': 'Liste d’attente', 'programme.days': 'Jours du programme', 'day.sessions': 'Séances du jour' },
+    templateNames: { 'welcome-letter': 'Lettre de bienvenue', invoice: 'Facture', letterhead: 'En-tête', signature: 'Signature', footer: 'Pied de page', problems: 'Références non résolues', 'loop-a': 'Boucle A', 'loop-b': 'Boucle B', programme: 'Programme du week-end portes ouvertes', blank: 'Page vierge' },
   },
 }

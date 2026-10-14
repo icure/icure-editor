@@ -10,11 +10,17 @@ export const field = (name: string, label: string | null = null) => ({ type: 'va
 export const p = (...content: object[]) => ({ type: 'paragraph', content })
 export const pAligned = (align: 'left' | 'center' | 'right' | 'justify', ...content: object[]) => ({ type: 'paragraph', attrs: { align }, content })
 export const h = (level: 1 | 2 | 3, ...content: object[]) => ({ type: 'heading', attrs: { level }, content })
-export const repeat = (source: string, ...content: object[]) => ({ type: 'repeat', attrs: { source }, content })
+export const repeat = (source: string, ...content: object[]) => ({ type: 'repeat', attrs: { source }, content: [{ type: 'repeat_body', content }] })
+export const zoned = (source: string, zones: { readonly header?: object[]; readonly body: object[]; readonly footer?: object[] }) => ({
+  type: 'repeat',
+  attrs: { source },
+  content: [...(zones.header ? [{ type: 'repeat_header', content: zones.header }] : []), { type: 'repeat_body', content: zones.body }, ...(zones.footer ? [{ type: 'repeat_footer', content: zones.footer }] : [])],
+})
 export const embed = (templateId: string) => ({ type: 'template_ref', attrs: { templateId } })
 export const image = (imageId: string, alt: string, width: number | null = null) => ({ type: 'image', attrs: { imageId, alt, width } })
 const cell = (type: 'table_cell' | 'table_header', ...content: object[]) => ({ type, content: [p(...content)] })
-export const headerRow = (...labels: string[]) => ({ type: 'table_row', content: labels.map((l) => cell('table_header', text(l))) })
+export const headerRow = (...labels: string[]) => ({ type: 'table_row', attrs: { zone: 'header' }, content: labels.map((l) => cell('table_header', text(l))) })
+export const footerRow = (...cells: object[][]) => ({ type: 'table_row', attrs: { zone: 'footer' }, content: cells.map((content) => cell('table_cell', ...content)) })
 export const fieldRow = (...names: string[]) => ({ type: 'table_row', content: names.map((n) => cell('table_cell', field(n))) })
 export const table = (...rows: object[]) => ({ type: 'table', content: rows })
 export const doc = (...pages: object[][]) => ({ type: 'doc', content: pages.map((content) => ({ type: 'page', content })) })

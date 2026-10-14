@@ -13,4 +13,12 @@ describe('labels', () => {
     expect(labels.unresolved.reasons).toEqual({ ...DEFAULT_LABELS.unresolved.reasons, cycle: 'boucle' })
     expect(labels.unresolved.chip(2)).toBe('2 unresolved references')
   })
+
+  it('merges the inline-editing labels one level deep, functions included', () => {
+    const labels = mergeLabels({ inlineEditing: { done: 'Terminé', editRepeat: (s) => `Bloc : ${s}` }, rowZone: { header: 'En-tête' } })
+    expect(labels.inlineEditing.done).toBe('Terminé')
+    expect(labels.inlineEditing.editRepeat('Sessions')).toBe('Bloc : Sessions')
+    expect(labels.inlineEditing.cancel).toBe(DEFAULT_LABELS.inlineEditing.cancel)
+    expect(labels.rowZone).toEqual({ ...DEFAULT_LABELS.rowZone, header: 'En-tête' })
+  })
 })

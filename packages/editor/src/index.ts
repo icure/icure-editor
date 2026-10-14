@@ -76,7 +76,7 @@ export {
 } from './images.ts'
 
 // Labels.
-export { DEFAULT_LABELS, mergeLabels, type EditorLabels, type PartialLabels, type ShownAlignment, type TableAction } from './labels.ts'
+export { DEFAULT_LABELS, mergeLabels, type EditorLabels, type InlineEditingLabels, type PartialLabels, type ShownAlignment, type TableAction } from './labels.ts'
 
 // Output.
 export { createSerializer, htmlDocumentCss, toHtml, toHtmlDocument, toHtmlFragment, type HtmlDocumentOptions, type HtmlOptions, type SerializerOptions } from './output/html.ts'

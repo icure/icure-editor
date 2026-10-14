@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { editorSchema, safeColour, safeFont, safeSize } from '../src/schema.ts'
 import { InvalidDocumentError, toEditorDocument } from '../src/document.ts'
+import { cell, docJson, page, paragraph, table, text, zoneRow, zoned } from './helpers.ts'
 
 const parse = (html: string) => {
   const host = document.createElement('div')
@@ -16,6 +17,29 @@ const serialise = (html: string) => {
 }
 
 describe('the schema as the only parser of pasted HTML', () => {
+  it('parses a pasted block without zones into a valid body', () => {
+    const node = parse('<div class="ie-page"><div class="ie-repeat" data-source="list.items"><p>a</p></div></div>')
+    node.check()
+    const repeat = node.child(0).child(0)
+    expect(repeat.type.name).toBe('repeat')
+    expect(repeat.child(0).type.name).toBe('repeat_body')
+    expect(repeat.child(0).textContent).toBe('a')
+  })
+
+  it('round-trips a block with zones and a table with row zones through copy and paste', () => {
+    const doc = toEditorDocument(docJson(page(zoned('list.items', { header: [paragraph(text('H'))], body: [table(zoneRow('header', cell('table_header', text('N'))), zoneRow('body', cell('table_cell', text('B'))), zoneRow('footer', cell('table_cell', text('F'))))], footer: [paragraph(text('F2'))] }))))
+    const host = document.createElement('div')
+    host.append(DOMSerializer.fromSchema(editorSchema).serializeFragment(doc.content))
+    expect(ProseParser.fromSchema(editorSchema).parse(host).eq(doc)).toBe(true)
+  })
+
+  it('reads a row zone from a closed set only', () => {
+    const node = parse('<div class="ie-page"><table><tr data-zone="footer"><td><p>a</p></td></tr><tr data-zone="&lt;x&gt;"><td><p>b</p></td></tr></table></div>')
+    const table = node.child(0).child(0)
+    expect(table.child(0).attrs.zone).toBe('footer')
+    expect(table.child(1).attrs.zone).toBe('body')
+  })
+
   it('drops links, scripts, frames and raw HTML, keeping their text', () => {
     const html = serialise('<div class="ie-page"><p>a <a href="javascript:alert(1)">link</a><script>alert(1)</script><iframe src="https://x.example"></iframe> <span onclick="x()">b</span></p></div>')
     expect(html).toBe('<div class="ie-page"><p>a link b</p></div>')

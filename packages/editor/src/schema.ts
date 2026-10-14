@@ -21,6 +21,13 @@ export const FONT_SIZES = ['8px', '10px', '11px', '12px', '13px', '14px', '16px'
 export const PAGE_CLASS = 'ie-page'
 export const FIELD_CLASS = 'ie-field'
 export const REPEAT_CLASS = 'ie-repeat'
+export const REPEAT_HEADER_CLASS = 'ie-repeat-header'
+export const REPEAT_BODY_CLASS = 'ie-repeat-body'
+export const REPEAT_FOOTER_CLASS = 'ie-repeat-footer'
+
+export const ROW_ZONES = ['header', 'body', 'footer'] as const
+export type RowZone = (typeof ROW_ZONES)[number]
+export const safeRowZone = (value: unknown): RowZone => ROW_ZONES.find((zone) => zone === value) ?? 'body'
 export const EMBED_CLASS = 'ie-embed'
 export const IMAGE_CLASS = 'ie-image'
 
@@ -87,7 +94,7 @@ const variable: NodeSpec = {
 // A repeating block over a source of the data provider: its content is drawn once per item.
 const repeat: NodeSpec = {
   group: 'block',
-  content: 'block+',
+  content: 'repeat_header? repeat_body repeat_footer?',
   // One unit in the editor (drawn from its items, never edited in place): the cursor never enters
   // its template, the keyboard selects it whole.
   atom: true,
@@ -104,6 +111,14 @@ const repeat: NodeSpec = {
     },
   ],
 }
+
+// A zone of a repeating block: drawn once (header, footer) or once per item (body).
+const zone = (className: string): NodeSpec => ({
+  content: 'block+',
+  isolating: true,
+  toDOM: (): DOMOutputSpec => ['div', { class: className }, 0],
+  parseDOM: [{ tag: `div.${className}` }],
+})
 
 // Another template embedded by id: an atom, drawn from the provider's copy of that template.
 const template_ref: NodeSpec = {
@@ -164,6 +179,15 @@ const styleMark = (attr: 'size' | 'color' | 'font', css: 'font-size' | 'color' |
   parseDOM: [{ style: css, getAttrs: (value: string | HTMLElement) => (check(value) ? { [attr]: check(value) } : false) }],
 })
 
+const tables = tableNodes({ tableGroup: 'block', cellContent: 'block+', cellAttributes: { borderColor: cellStyle('border-color'), background: cellStyle('background-color') } })
+// A row of a repeating block's table: drawn once before (header) or after (footer) the items, or per item (body).
+const table_row: NodeSpec = {
+  ...tables.table_row,
+  attrs: { zone: { default: 'body' } },
+  toDOM: (node): DOMOutputSpec => ['tr', safeRowZone(node.attrs.zone) === 'body' ? {} : { 'data-zone': safeRowZone(node.attrs.zone) }, 0],
+  parseDOM: [{ tag: 'tr', getAttrs: (dom: HTMLElement | string) => ({ zone: safeRowZone(elementOf(dom)?.dataset.zone) }) }],
+}
+
 export const editorSchema = new Schema({
   nodes: {
     doc: { content: 'page+' },
@@ -171,8 +195,12 @@ export const editorSchema = new Schema({
     paragraph,
     heading,
     repeat,
+    repeat_header: zone(REPEAT_HEADER_CLASS),
+    repeat_body: zone(REPEAT_BODY_CLASS),
+    repeat_footer: zone(REPEAT_FOOTER_CLASS),
     template_ref,
-    ...tableNodes({ tableGroup: 'block', cellContent: 'block+', cellAttributes: { borderColor: cellStyle('border-color'), background: cellStyle('background-color') } }),
+    ...tables,
+    table_row,
     text: { group: 'inline' },
     variable,
     image,

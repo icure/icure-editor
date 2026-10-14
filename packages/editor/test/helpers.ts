@@ -7,11 +7,24 @@ export const field = (name: string, label: string | null = null) => ({ type: 'va
 export const paragraph = (...content: object[]) => ({ type: 'paragraph', content })
 export const aligned = (align: string, ...content: object[]) => ({ type: 'paragraph', attrs: { align }, content })
 export const page = (...content: object[]) => ({ type: 'page', content })
-export const repeat = (source: string, ...content: object[]) => ({ type: 'repeat', attrs: { source }, content })
+// A repeating block whose content is its body (the common case).
+export const repeat = (source: string, ...content: object[]) => ({ type: 'repeat', attrs: { source }, content: [{ type: 'repeat_body', content }] })
+// A repeating block with explicit zones.
+export const zoned = (source: string, zones: { readonly header?: object[]; readonly body: object[]; readonly footer?: object[] }) => ({
+  type: 'repeat',
+  attrs: { source },
+  content: [
+    ...(zones.header ? [{ type: 'repeat_header', content: zones.header }] : []),
+    { type: 'repeat_body', content: zones.body },
+    ...(zones.footer ? [{ type: 'repeat_footer', content: zones.footer }] : []),
+  ],
+})
 export const embed = (templateId: string) => ({ type: 'template_ref', attrs: { templateId } })
 export const image = (imageId: string, alt = '', width: number | null = null) => ({ type: 'image', attrs: { imageId, alt, width } })
 export const cell = (type: 'table_cell' | 'table_header', ...content: object[]) => ({ type, content: [paragraph(...content)] })
 export const row = (...cells: object[]) => ({ type: 'table_row', content: cells })
+// A table row in a zone.
+export const zoneRow = (zone: 'header' | 'body' | 'footer', ...cells: object[]) => ({ type: 'table_row', attrs: { zone }, content: cells })
 export const table = (...rows: object[]) => ({ type: 'table', content: rows })
 export const docJson = (...pages: object[]) => ({ type: 'doc', content: pages })
 export const doc = (...pages: object[]) => toEditorDocument(docJson(...pages))

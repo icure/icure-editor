@@ -306,6 +306,12 @@ export const resolveDocument = (doc: ProseNode, provider: EditorDataProvider, op
 
 const sameMap = <V>(a: ReadonlyMap<string, V>, b: ReadonlyMap<string, V>): boolean => a.size === b.size && [...a].every(([key, value]) => b.has(key) && b.get(key) === value)
 
+const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>): boolean => a.size === b.size && [...a].every((key) => b.has(key))
+
+// Shapes are rebuilt by every resolution, so they are compared by content.
+const sameShapes = (a: ReadonlyMap<string, RepeatShape>, b: ReadonlyMap<string, RepeatShape>): boolean =>
+  a.size === b.size && [...a].every(([key, shape]) => { const other = b.get(key); return !!other && sameSet(shape.itemFields, other.itemFields) && sameSet(shape.itemRepeats, other.itemRepeats) })
+
 // Two resolutions that draw the same (the editor keeps the previous one to avoid a redraw).
 export function sameResolution(a: Resolution, b: Resolution): boolean {
   return (
@@ -315,7 +321,7 @@ export function sameResolution(a: Resolution, b: Resolution): boolean {
     sameMap(a.repeats, b.repeats) &&
     sameMap(a.templates, b.templates) &&
     sameMap(a.images, b.images) &&
-    sameMap(a.shapes, b.shapes) &&
+    sameShapes(a.shapes, b.shapes) &&
     JSON.stringify(a.unresolved) === JSON.stringify(b.unresolved)
   )
 }

@@ -15,6 +15,8 @@ const result = await Bun.build({
   target: 'browser',
   packages: 'external',
   sourcemap: 'linked',
+  // The production JSX runtime (`react/jsx-runtime`): the development one is empty in a production app.
+  jsx: { development: false },
 })
 if (!result.success) {
   for (const log of result.logs) console.error(log)

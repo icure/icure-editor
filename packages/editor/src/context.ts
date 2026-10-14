@@ -90,6 +90,9 @@ export interface EditorDataProvider {
   // Templates offered by "Insert template", and the content of an embedded one.
   listTemplates?(): MaybePromise<readonly TemplateSummary[]>
   loadTemplate?(id: string): MaybePromise<TemplateContent | null | undefined>
+  // Saves an embedded template edited in place ("Update the shared template"); `content` is ProseMirror
+  // JSON of the editor schema, never HTML. Absent: only a copy into the document is offered.
+  saveTemplate?(id: string, content: unknown): MaybePromise<void>
   readonly images?: ImageProvider
 }
 

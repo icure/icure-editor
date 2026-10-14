@@ -3,9 +3,33 @@
 import type { BlockStyle } from './commands.ts'
 import type { ImageFileError } from './images.ts'
 import type { UnresolvedReason } from './context.ts'
+import type { RowZone } from './schema.ts'
 
 export type ShownAlignment = 'left' | 'center' | 'right' | 'justify'
 export type TableAction = 'addRow' | 'addColumn' | 'deleteRow' | 'deleteColumn'
+
+// The editing area of a repeating block or an embedded template opened in place.
+export interface InlineEditingLabels {
+  // The bar's title, also the name of the editing area and of its editor.
+  readonly editRepeat: (source: string) => string
+  readonly editTemplate: (name: string) => string
+  readonly done: string
+  readonly cancel: string
+  readonly keepEditing: string
+  // The question asked on Done for an embedded template, and its answers.
+  readonly question: string
+  readonly updateShared: string
+  readonly makeCopy: string
+  // The zones' captions, and the placeholders of an empty header or footer.
+  readonly header: string
+  readonly body: string
+  readonly footer: string
+  readonly addHeader: string
+  readonly addFooter: string
+  readonly saveFailed: string
+  // How to leave (the bar's description).
+  readonly hint: string
+}
 
 export interface EditorLabels {
   readonly canvas: string
@@ -28,6 +52,8 @@ export interface EditorLabels {
   readonly insertTable: string
   readonly tableMenu: string
   readonly table: Readonly<Record<TableAction, string>>
+  // The Table menu's actions on a row of a repeating block's table (while the block is edited).
+  readonly rowZone: Readonly<Record<RowZone, string>>
   readonly insertField: string
   readonly insertBlock: string
   readonly insertTemplate: string
@@ -39,6 +65,7 @@ export interface EditorLabels {
   // The caption over an embedded template.
   readonly embeddedTemplate: (name: string) => string
   readonly embedProblem: Readonly<Record<'cycle' | 'depth' | 'missing', string>>
+  readonly inlineEditing: InlineEditingLabels
   readonly image: {
     readonly panel: string
     readonly alt: string
@@ -81,6 +108,7 @@ export const DEFAULT_LABELS: EditorLabels = {
   insertTable: 'Insert table',
   tableMenu: 'Table',
   table: { addRow: 'Add row', addColumn: 'Add column', deleteRow: 'Delete row', deleteColumn: 'Delete column' },
+  rowZone: { header: 'Make it a header row', body: 'Make it a repeated row', footer: 'Make it a footer row' },
   insertField: 'Insert field',
   insertBlock: 'Insert repeating block',
   insertTemplate: 'Insert template',
@@ -90,6 +118,23 @@ export const DEFAULT_LABELS: EditorLabels = {
   repeatEmpty: 'Nothing to list',
   embeddedTemplate: (name) => `Template: ${name}`,
   embedProblem: { cycle: 'This template embeds itself', depth: 'Templates are nested too deeply', missing: 'Template not found' },
+  inlineEditing: {
+    editRepeat: (source) => `Repeating block: ${source}`,
+    editTemplate: (name) => `Template: ${name}`,
+    done: 'Done',
+    cancel: 'Cancel',
+    keepEditing: 'Keep editing',
+    question: 'Where should these changes go?',
+    updateShared: 'Update the shared template',
+    makeCopy: 'Make a copy for this document',
+    header: 'Header',
+    body: 'Repeated for each item',
+    footer: 'Footer',
+    addHeader: 'Click to add a header',
+    addFooter: 'Click to add a footer',
+    saveFailed: 'The template could not be saved.',
+    hint: 'Escape cancels; Ctrl+Enter (⌘+Enter) applies the changes.',
+  },
   image: {
     panel: 'Image',
     alt: 'Image description',

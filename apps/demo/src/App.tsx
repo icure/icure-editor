@@ -3,7 +3,7 @@
 import { documentFileName, DocumentEditor, downloadBytes, HTML_TYPE, PDF_TYPE, printPdf, resolveDocument, toHtmlDocument, toMarkdown, type DocumentEditorHandle } from '@icure/editor'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { createFakeProvider, DEMO_DAY } from './fakeContext.ts'
+import { createFakeProvider, DEMO_DAY, storedTemplate } from './fakeContext.ts'
 import { LABEL_SETS, LANGUAGES } from './labels/index.ts'
 import { documentPdf } from './pdf.ts'
 import { SAMPLE_TEMPLATES, sampleTemplate } from './samples/templates.ts'
@@ -120,8 +120,8 @@ export function App() {
         </nav>
         <main className="demo-main">
           <h2 className="demo-template-title">{name}</h2>
-          {/* Keyed by template: a new template opens a new document. */}
-          <DocumentEditor key={template.id} ref={editor} initial={template.content} provider={provider} documentId={template.id} labels={labels.editor} readOnly={state.readOnly} />
+          {/* Keyed by template: a new template opens a new document, as last saved. */}
+          <DocumentEditor key={template.id} ref={editor} initial={storedTemplate(template.id) ?? template.content} provider={provider} documentId={template.id} labels={labels.editor} readOnly={state.readOnly} />
           <section aria-label={strings.output} className="demo-output">
             <h2>{strings.output}</h2>
             <div className="demo-actions">

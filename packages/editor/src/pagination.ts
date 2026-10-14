@@ -113,7 +113,8 @@ export function paginationPlugin(): Plugin {
       schedule()
       return {
         update: (updated, previous) => {
-          if (!reflowing && !updated.state.doc.eq(previous.doc)) schedule()
+          // A block closed without a change (Cancel) also reflows: what changed meanwhile didn't.
+          if (!reflowing && (!updated.state.doc.eq(previous.doc) || (editingTarget(previous) && !editingTarget(updated.state)))) schedule()
         },
         destroy: () => {
           alive = false

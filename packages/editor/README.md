@@ -92,6 +92,7 @@ interface EditorDataProvider {
   resolveRepeat?(source: string): MaybePromise<RepeatData | null | undefined>
   listTemplates?(): MaybePromise<readonly TemplateSummary[]>              // "Insert template"
   loadTemplate?(id: string): MaybePromise<TemplateContent | null | undefined>
+  saveTemplate?(id: string, content: unknown): MaybePromise<void>         // "Update the shared template"
   readonly images?: ImageProvider
 }
 
@@ -148,10 +149,41 @@ const provider: EditorDataProvider = {
 
 A `sessions` block placed in the body of a `days` block lists the sessions of each day.
 
+## Editing blocks in place
+
+A repeating block or an embedded template is drawn from data, as one unit. To change it, open it in
+place: **double-click** it, or select it (the arrows select it whole) and press **Enter**. It turns
+into an editing area showing its template, fields as placeholders (`{event.title}`), under a bar:
+
+- **Done** (or Ctrl+Enter / ⌘+Enter) applies the changes; **Cancel** (or Escape) discards them,
+  without a question. Clicking elsewhere doesn't leave: the rest of the document waits (it is not
+  editable, and pages are not re-paginated, until the area closes).
+- The toolbar acts on the editing area. Undo and redo work inside it; after Done, the whole change
+  is one undo step in the document. `getDocument()`, `onChange` and `onEdit` only see the change on
+  Done; `editorRef.current.activeView` is the view the toolbar acts on.
+- **A repeating block** shows its three zones, captioned "Header", "Repeated for each item" and
+  "Footer"; a missing header or footer is offered empty ("Click to add a header"), and dropped again
+  if still empty on Done. "Insert field" offers the item fields of the block (and of the blocks
+  around it, innermost first) before the document's fields. In a body table, header and footer rows
+  are shown distinctly, and the Table menu can make the current row a header row, a footer row or
+  a repeated row. Done writes the block back into the document.
+- **An embedded template**: Done asks where the changes go. **Update the shared template** calls the
+  provider's `saveTemplate(id, content)` with ProseMirror JSON of the editor schema (never HTML),
+  then resolves the document again (every document embedding it changes); while it saves, the area
+  can't be edited or left; if it fails, the area stays open with an alert. **Make a copy for this document** replaces the reference with the
+  edited blocks (fields stay fields). **Keep editing** goes back. Without `saveTemplate`, only the
+  copy is offered. A template that didn't change closes without asking.
+- A block inside an editing area opens the same way, one level at a time. Opening another block
+  cancels the open one. A read-only editor opens nothing. An embedded template inserted inside an
+  editing area is resolved on Done (until then it is drawn as not found and can't be opened).
+
 ## Labels and styling
 
 - No user-facing string is hard-coded: pass `labels` (`PartialLabels`) to the editor; English
   defaults (`DEFAULT_LABELS`) fill the rest. The demo ships English, French and Dutch label sets.
+  The editing area's strings are under `inlineEditing` (bar title, Done, Cancel, the template
+  question, zone captions and placeholders, the save error, the hint), and the Table menu's row
+  actions under `rowZone`.
 - The stylesheet uses `--ie-*` custom properties only (colours, spacing, radii, control size, page
   format); set any of them on `.ie-editor` or an ancestor. Dark mode follows
   `prefers-color-scheme`, overridable with `data-theme="light|dark"` on an ancestor.
@@ -170,6 +202,10 @@ A `sessions` block placed in the body of a `days` block lists the sessions of ea
   Tab / Shift-Tab between table cells. A repeating block or an embedded template is one unit: the
   arrows select it whole, and stop between two such blocks (a gap cursor) where typing or Enter
   starts a new line.
+- An editing area is a `role="group"` named after its bar title ("Repeating block: Sessions"); its
+  editor is a `role="textbox"` with the same name, described by the bar's hint (how to leave). Its
+  zones are labelled groups. The bar's buttons are named by their text. Double-click has Enter as
+  its keyboard equivalent; Escape cancels from the editor or the bar.
 - The raw expression of a tapped reference is announced under the toolbar (`aria-live`): the touch
   alternative to the hover tooltip. Images are resized by buttons and a number field, never by
   dragging; their description is asked as soon as they are inserted.
@@ -188,6 +224,9 @@ A `sessions` block placed in the body of a `days` block lists the sessions of ea
   `blob:` URL or an `https:` URL without credentials; SVG and every other scheme are refused.
   Uploaded files are checked for declared type, size (2 MB by default) and actual content (magic
   numbers) before the host sees them.
+- **Editing in place** uses the same schema (pasted HTML goes through the same parser); a template
+  saved with `saveTemplate` is ProseMirror JSON of that schema, never HTML. The demo's provider
+  refuses content that doesn't fit the schema (`isEditorDocument`); a host should check it too.
 - **Nested templates** are inlined with cycle detection (a template met again on its own path,
   the edited document included) and a depth limit (5 by default).
 - **PDF**: the pdfmake instance is locked down (no URL, no local file); images are embedded from

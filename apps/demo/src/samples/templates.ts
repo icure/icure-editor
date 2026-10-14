@@ -50,7 +50,7 @@ export const SAMPLE_TEMPLATES: readonly SampleTemplate[] = [
         body: [h(2, field('day.label')), zoned('day.sessions', { body: [p(text('– '), field('session.time'), text(' '), field('session.title'), text(' ('), field('day.label'), text(')'))], footer: [p(withMarks(field('day.note'), SMALL))] })],
       }),
       p(),
-      embed('footer'),
+      embed('signature'),
     ]),
   },
   {

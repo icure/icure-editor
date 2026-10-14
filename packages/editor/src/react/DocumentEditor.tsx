@@ -3,32 +3,47 @@
 // the host's data provider and drawn as text (never evaluated); the raw expression shows on hover,
 // under the toolbar when a reference is tapped, and in place with "Show expressions". The document
 // lives in memory only: the host decides what to persist (onEdit).
-import { baseKeymap } from 'prosemirror-commands'
-import { gapCursor } from 'prosemirror-gapcursor'
-import { history, redo, undo } from 'prosemirror-history'
-import { keymap } from 'prosemirror-keymap'
+import { redo, undo } from 'prosemirror-history'
 import type { Node as ProseNode } from 'prosemirror-model'
 import { EditorState, NodeSelection, type Command } from 'prosemirror-state'
-import { addColumnAfter, addRowAfter, deleteColumn, deleteRow, goToNextCell, tableEditing } from 'prosemirror-tables'
+import { addColumnAfter, addRowAfter, deleteColumn, deleteRow } from 'prosemirror-tables'
 import { EditorView } from 'prosemirror-view'
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react'
 
-import { insertImage, selectedImage, selectedKey, toggleEm, toggleStrong, toggleUnderline, updateSelectedImage } from '../commands.ts'
+import { insertImage, selectedImage, selectedKey, updateSelectedImage } from '../commands.ts'
 import type { EditorDataProvider, FieldDescriptor, PickedImage, RepeatSourceDescriptor, TemplateSummary } from '../context.ts'
 import { toEditorDocument } from '../document.ts'
 import { checkImageFile, DEFAULT_MAX_IMAGE_BYTES, IMAGE_TYPES, type ImageFileError, type ImageType } from '../images.ts'
 import { mergeLabels, type PartialLabels } from '../labels.ts'
-import { A4_PAGE, PAGINATION_META, paginationPlugin, reflow, type PageFormat } from '../pagination.ts'
+import { A4_PAGE, PAGINATION_META, reflow, type PageFormat } from '../pagination.ts'
 import { expression } from '../render.ts'
 import { createResolver, DEFAULT_MAX_TEMPLATE_DEPTH, EMPTY_RESOLUTION, sameResolution, type Resolution } from '../resolve.ts'
 import { ImagePanel } from './ImagePanel.tsx'
+import { EditingLevel, editorPlugins, type EditingHost, type InlineSession } from './inlineEditing.ts'
 import { nodeViews } from './nodeViews.ts'
 import { Toolbar } from './Toolbar.tsx'
 import { UnresolvedChip } from './UnresolvedChip.tsx'
 
 
+// The item fields of the repeating blocks open in place, innermost first: the source's declared
+// fields, then any other field its resolved items hold (labelled by its key).
+function itemFields(sessions: readonly InlineSession[], sources: readonly RepeatSourceDescriptor[], resolution: Resolution): FieldDescriptor[] {
+  return sessions
+    .filter((session) => session.kind === 'repeat')
+    .reverse()
+    .flatMap((session) => {
+      const source = findSource(sources, session.key)
+      const declared = source?.itemFields ?? []
+      const others = [...(resolution.shapes.get(session.key)?.itemFields ?? [])].filter((key) => !declared.some((f) => f.key === key)).map((key) => ({ key, label: key }))
+      const group = source?.label ?? session.key
+      return [...declared, ...others].map((f) => ({ key: f.key, label: f.label, group }))
+    })
+}
+
 export interface DocumentEditorHandle {
   readonly view: EditorView | null
+  // The view the toolbar acts on: the innermost block open in place, else the document's view.
+  readonly activeView: EditorView | null
   getDocument(): ProseNode | null
   getResolution(): Resolution
   // Forgets the provider's cached answers and resolves again (the host's data changed).
@@ -60,11 +75,17 @@ export interface DocumentEditorProps {
 
 // The delay after the last edit before the document's references are resolved again.
 const RESOLVE_DELAY_MS = 120
-const KEYMAP: Record<string, Command> = { 'Mod-b': toggleStrong, 'Mod-i': toggleEm, 'Mod-u': toggleUnderline, 'Mod-z': undo, 'Mod-y': redo, 'Shift-Mod-z': redo, Tab: goToNextCell(1), 'Shift-Tab': goToNextCell(-1) }
 const TABLE_COMMANDS = { addRow: addRowAfter, addColumn: addColumnAfter, deleteRow, deleteColumn }
 
-function createState(doc: ProseNode): EditorState {
-  return EditorState.create({ doc, plugins: [history(), keymap(KEYMAP), keymap(baseKeymap), gapCursor(), tableEditing(), paginationPlugin()] })
+// A repeat source's descriptor, nested sources included.
+function findSource(sources: readonly RepeatSourceDescriptor[], key: string, depth = 0): RepeatSourceDescriptor | null {
+  if (depth > 8) return null
+  for (const source of sources) {
+    if (source.key === key) return source
+    const nested = findSource(source.itemRepeats ?? [], key, depth + 1)
+    if (nested) return nested
+  }
+  return null
 }
 
 // The provider's offers (fields, blocks, templates), loaded once per provider.
@@ -158,6 +179,26 @@ export function DocumentEditor(props: DocumentEditorProps) {
     scheduleRef.current = schedule
   }, [schedule])
 
+  // Blocks opened in place: the host reads the editor's latest inputs; every open, close or edit of an
+  // editing area re-renders the editor (the toolbar follows the innermost area).
+  const [, setEditingVersion] = useState(0)
+  const editingInputs = useRef({ labels, provider, repeatSources: offers.repeatSources, refresh: () => {} })
+  const mainLevel = useMemo(() => {
+    const host: EditingHost = {
+      labels: () => editingInputs.current.labels,
+      resolution: () => latest.current,
+      sourceLabel: (source) => findSource(editingInputs.current.repeatSources, source)?.label ?? source,
+      saveTemplate: () => {
+        const current = editingInputs.current.provider
+        return current.saveTemplate ? (id, content) => current.saveTemplate!(id, content) : null
+      },
+      templateSaved: () => editingInputs.current.refresh(),
+      changed: () => setEditingVersion((version) => version + 1),
+    }
+    return new EditingLevel(host, null)
+  }, [latest])
+  const activeView = useCallback(() => mainLevel.innermost()?.view ?? viewRef.current, [mainLevel])
+
   // The parse error, if the initial content doesn't fit the schema (shown, never half-parsed).
   const [parsed] = useState((): ProseNode | Error => {
     try {
@@ -170,7 +211,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
   useEffect(() => {
     if (!host.current || parsed instanceof Error) return undefined
     const view = new EditorView(host.current, {
-      state: createState(parsed),
+      state: EditorState.create({ doc: parsed, plugins: editorPlugins(mainLevel, { paginate: true }) }),
       dispatchTransaction: (tr) => {
         const next = view.state.apply(tr)
         view.updateState(next)
@@ -184,13 +225,16 @@ export function DocumentEditor(props: DocumentEditorProps) {
       },
     })
     viewRef.current = view
+    mainLevel.view = view
     setState(view.state)
     setViewVersion((version) => version + 1)
     return () => {
+      mainLevel.discard()
+      mainLevel.view = null
       viewRef.current = null
       view.destroy()
     }
-  }, [parsed])
+  }, [parsed, mainLevel])
 
   // A new provider (or view) resolves the current document at once.
   useEffect(() => {
@@ -201,20 +245,28 @@ export function DocumentEditor(props: DocumentEditorProps) {
   useEffect(() => {
     const view = viewRef.current
     if (!view) return
+    mainLevel.enabled = !readOnly
+    // Read only: nothing stays open.
+    if (readOnly) mainLevel.closeAll()
     view.setProps({
-      nodeViews: nodeViews({ resolution, showExpressions, labels }),
-      editable: () => !readOnly,
+      nodeViews: nodeViews({ resolution, showExpressions, labels, editing: readOnly ? null : mainLevel }),
+      // Frozen while a block is open: the edits go to its editing area.
+      editable: () => !readOnly && !mainLevel.session,
       attributes: { 'aria-label': labels.canvas, 'aria-multiline': 'true', role: 'textbox', 'aria-readonly': String(readOnly), class: 'ie-canvas' },
     })
+    mainLevel.refresh()
     // Values change the pages' heights.
     queueMicrotask(() => !view.isDestroyed && reflow(view))
-  }, [resolution, showExpressions, labels, readOnly, viewVersion])
+  }, [resolution, showExpressions, labels, readOnly, viewVersion, mainLevel])
 
   useImperativeHandle(
     ref,
     () => ({
       get view() {
         return viewRef.current
+      },
+      get activeView() {
+        return activeView()
       },
       getDocument: () => viewRef.current?.state.doc ?? null,
       getResolution: () => latest.current,
@@ -225,27 +277,44 @@ export function DocumentEditor(props: DocumentEditorProps) {
       },
       focus: () => viewRef.current?.focus(),
     }),
-    [latest, resolver, resolveNow],
+    [latest, resolver, resolveNow, activeView],
   )
 
-  const run = useCallback((command: Command, focus = true) => {
-    const view = viewRef.current
-    if (!view) return
-    command(view.state, view.dispatch)
-    if (focus) view.focus()
-  }, [])
+  useEffect(() => {
+    editingInputs.current = {
+      labels,
+      provider,
+      repeatSources: offers.repeatSources,
+      refresh: () => {
+        resolver.clear()
+        const view = viewRef.current
+        if (view) resolveNow(view.state.doc)
+      },
+    }
+  }, [labels, provider, offers.repeatSources, resolver, resolveNow])
+
+  // The toolbar, the image panel and the menus act on the active view (the innermost open block).
+  const run = useCallback(
+    (command: Command, focus = true) => {
+      const view = activeView()
+      if (!view) return
+      command(view.state, view.dispatch, view)
+      if (focus) view.focus()
+    },
+    [activeView],
+  )
 
   // The inserted image is selected and its description field focused (alt text is asked at once).
   const placeImage = useCallback(
     (picked: PickedImage) => {
-      const view = viewRef.current
+      const view = activeView()
       if (!view) return
       insertImage({ imageId: picked.id, alt: picked.alt ?? '', width: picked.width ?? null })(view.state, view.dispatch)
       const pos = view.state.selection.from - 1
       if (pos >= 0 && view.state.doc.nodeAt(pos)?.type.name === 'image') view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)))
       setFocusAlt(true)
     },
-    [],
+    [activeView],
   )
 
   useEffect(() => {
@@ -279,8 +348,16 @@ export function DocumentEditor(props: DocumentEditorProps) {
     }
   }
 
-  const selected = state ? selectedKey(state) : null
-  const image = state && !readOnly ? selectedImage(state) : null
+  // The open blocks, outermost first; the toolbar shows the innermost one's state.
+  const sessions: InlineSession[] = []
+  for (let session = mainLevel.session; session; session = session.level.session) sessions.push(session)
+  const activeState = sessions.at(-1)?.view.state ?? state
+  const selected = activeState ? selectedKey(activeState) : null
+  const image = activeState && !readOnly ? selectedImage(activeState) : null
+  // Inside open blocks: their item fields first (innermost first, named after the source), then the
+  // document's fields; a template being edited is not offered for embedding.
+  const fields = sessions.length > 0 ? [...itemFields(sessions, offers.repeatSources, resolution), ...offers.fields] : offers.fields
+  const templates = offers.templates.filter((t) => !sessions.some((s) => s.kind === 'template' && s.key === t.id))
   const pageStyle = { '--ie-page-width': `${page.widthMm}mm`, '--ie-page-aspect': `${page.widthMm} / ${page.heightMm}`, '--ie-page-margin': `${page.marginMm}mm` } as CSSProperties
 
   if (parsed instanceof Error) {
@@ -293,8 +370,8 @@ export function DocumentEditor(props: DocumentEditorProps) {
 
   return (
     <div className={['ie-editor', className].filter(Boolean).join(' ')} style={pageStyle}>
-      {!readOnly && state && (
-        <Toolbar state={state} run={run} labels={labels} fields={offers.fields} repeatSources={offers.repeatSources} templates={offers.templates} onInsertImage={onInsertImage} tableCommands={TABLE_COMMANDS} undo={undo} redo={redo}>
+      {!readOnly && activeState && (
+        <Toolbar state={activeState} run={run} labels={labels} fields={fields} repeatSources={offers.repeatSources} templates={templates} onInsertImage={onInsertImage} tableCommands={TABLE_COMMANDS} undo={undo} redo={redo}>
           {toolbarExtras}
         </Toolbar>
       )}

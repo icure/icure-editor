@@ -17,7 +17,7 @@ A repeating block or an embedded template is drawn as an atom filled with data. 
 3. **Embedded template, on Done:** the bar asks **"Update the shared template"** or **"Make a copy for this document"**, plus **"Keep editing"**.
    - Shared goes through a new optional provider method, `saveTemplate`.
    - Copy replaces the reference with the template's blocks.
-   - Without `saveTemplate`, only the copy is offered.
+   - Without `saveTemplate`, only the copy is offered: Done still asks, with "Make a copy" and "Keep editing" (implementation decision).
 4. **Repeating block: edits are local.** Done writes the zones back into the main document. No question is asked.
 5. **Zones in edit mode: all three are always shown.**
    - They are labelled areas: "Header", "Repeated for each item" and "Footer".

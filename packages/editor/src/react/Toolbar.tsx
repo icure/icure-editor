@@ -21,8 +21,9 @@ import {
   type BlockStyle,
 } from '../commands.ts'
 import type { FieldDescriptor, RepeatSourceDescriptor, TemplateSummary } from '../context.ts'
+import { bodyTableRow, setRowZone } from '../editing.ts'
 import type { EditorLabels, ShownAlignment, TableAction } from '../labels.ts'
-import { editorSchema, FONT_SIZES, FONTS } from '../schema.ts'
+import { editorSchema, FONT_SIZES, FONTS, ROW_ZONES } from '../schema.ts'
 import { AlignIcon, FieldIcon, ImageIcon, InsertTableIcon, RedoIcon, RepeatIcon, TableIcon, TemplateIcon, UndoIcon } from './icons.tsx'
 import { Menu } from './Menu.tsx'
 import { Tooltip } from './Tooltip.tsx'
@@ -111,8 +112,16 @@ export function Toolbar({ state, run, labels, fields, repeatSources, templates, 
         ))}
       </div>
       <ToolButton label={labels.insertTable} glyph={<InsertTableIcon />} onPress={() => run(insertTable)} />
-      <Menu label={labels.tableMenu} icon={<TableIcon />} items={TABLE_ACTIONS.map((id) => ({ id, label: labels.table[id], onSelect: () => run(tableCommands[id]) }))} />
-      {fields.length > 0 && <Menu label={labels.insertField} icon={<FieldIcon />} items={fields.map((f) => ({ id: f.key, label: f.label, ...(f.group ? { group: f.group } : {}), onSelect: () => run(insertField(f.key)) }))} />}
+      <Menu
+        label={labels.tableMenu}
+        icon={<TableIcon />}
+        items={[
+          ...TABLE_ACTIONS.map((id) => ({ id, label: labels.table[id], onSelect: () => run(tableCommands[id]) })),
+          // In a repeating block's table (while the block is edited): the row's zone.
+          ...(bodyTableRow(state) ? ROW_ZONES.map((zone) => ({ id: `zone-${zone}`, label: labels.rowZone[zone], onSelect: () => run(setRowZone(zone)) })) : []),
+        ]}
+      />
+      {fields.length > 0 && <Menu label={labels.insertField} icon={<FieldIcon />} items={fields.map((f) => ({ id: `${f.group ?? ''}/${f.key}`, label: f.label, ...(f.group ? { group: f.group } : {}), onSelect: () => run(insertField(f.key)) }))} />}
       {repeatSources.length > 0 && <Menu label={labels.insertBlock} icon={<RepeatIcon />} items={repeatSources.map((s) => ({ id: s.key, label: s.label, onSelect: () => run(insertRepeat(s)) }))} />}
       {templates.length > 0 && <Menu label={labels.insertTemplate} icon={<TemplateIcon />} items={templates.map((t) => ({ id: t.id, label: t.name, onSelect: () => run(insertTemplate(t.id)) }))} />}
       {onInsertImage && <ToolButton label={labels.insertImage} glyph={<ImageIcon />} onPress={onInsertImage} />}

@@ -28,3 +28,20 @@ Format: decision — why — what it costs if wrong.
 - All three row-zone actions are always offered in a body table (including the row's current zone) — a stable menu is easier to learn and test — selecting the current zone does nothing visible.
 - The demo keeps a module-level template store (seeded from the samples) that `loadTemplate` reads and `saveTemplate` writes, and opening a template from the navigation shows its stored version — the provider is recreated on language switch and the editor per template — a saved template survives navigation, not a reload.
 - The programme sample embeds the signature (instead of the footer, which the signature embeds in turn) — the e2e test needs a second document embedding the signature — the programme now ends with the signature.
+- The existing e2e "is one unit" now expects Enter on the selected events block to open it (and Escape to leave it unchanged) — the spec makes Enter on a node-selected block the keyboard way in — none.
+- Escape is caught on the editing area's element regardless of `defaultPrevented` — ProseMirror marks Escape as handled itself — an Escape a host handles inside the area also cancels it.
+- The repeat and embed node views return `update: () => false`, so they are redrawn whenever their node or decorations change — an embed is a leaf, and ProseMirror would otherwise keep its view when the editing decoration appears — a redraw of a block on unrelated attribute changes (cheap: its content is drawn from the resolution).
+- An arrow at the edge of a line next to a repeating block or an embedded template selects the block whole (a keymap before the gap cursor's) — the gap cursor stepped inside a block whose body ends with a table (found by the keyboard-only invoice test), so Enter couldn't open it — one more keymap; arrows elsewhere are unchanged.
+- The demo's `saveTemplate` refuses an unknown id or content that doesn't fit the schema (`isEditorDocument`) — a host should validate what it stores — none.
+- Inside an editing area, an item field (declared by a known source's shape) is not styled as unresolved — it is filled per item, so the caution style was misleading (seen on the invoice screenshot) — a field misspelled as another source's item field isn't flagged while editing.
+- `bodyTableRow`, `setRowZone` and `editingTarget` are exported, alongside the other toolbar commands — hosts building their own toolbar need the row-zone actions — a larger public API.
+- The root `README.md` (an older copy) is left unchanged; `packages/editor/README.md` documents the feature — the package README is the one the library ships — the root copy stays behind.
+- Commits: the SSH-signed commit timed out twice (Task 3 and its retry); per the brief, the remaining work is left uncommitted, staged — the user has to sign and commit it.
+
+## After the independent review (2026-10-14)
+
+- While the shared template is being saved, the area can't be edited, answered again or left (Done, Ctrl/⌘+Enter, Cancel and Escape do nothing); a save that succeeds after the area was closed (the editor unmounted) still resolves the templates again — otherwise a save could be followed by a copy, or a Cancel that the save contradicts — a slow host keeps the area locked until it answers.
+- A discard without a transaction of its own (the block left the document) tells its view afterwards, so the view drops the block's mark and becomes editable again.
+- The bar (title, hint, buttons) follows a change of labels while an area is open.
+- The gap cursor is shown inside an editing area; closing an area without a change (Cancel) reflows the pages.
+- Not done (minor, parked): the "item field is not unresolved" check matches any source's item fields rather than the blocks around the field; a template inserted inside an area is resolved only on Done (documented in the README).

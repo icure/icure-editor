@@ -19,11 +19,16 @@ test.describe('repeating blocks', () => {
     await clickInto(page, canvas(page).locator('.ie-repeat + p'))
     await page.keyboard.press('Backspace')
     await expect(canvas(page).locator('.ie-repeat + .ie-embed')).toHaveCount(1)
-    // Enter and arrows around the block leave its items alone.
+    // Enter and arrows around the block leave its items alone; Enter on the selected block opens it
+    // in place, and Escape leaves it as it was.
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('Enter')
     await page.keyboard.press('ArrowRight')
     await page.keyboard.press('Enter')
+    const area = page.getByRole('group', { name: L.inlineEditing.editRepeat(APP.sources['events.upcoming']!) })
+    await expect(area).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(area).toHaveCount(0)
     await expect(block.locator('p')).toHaveText(lines)
     // The cursor goes between the block and the template, where typing makes a new line.
     await open(page, 'welcome-letter')

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { toMarkdown } from '../src/output/markdown.ts'
 import { resolveDocument } from '../src/resolve.ts'
-import { aligned, cell, doc, fakeProvider, field, image, page, paragraph, PNG_DATA_URI, repeat, row, table, text } from './helpers.ts'
+import { aligned, cell, doc, fakeProvider, field, image, page, paragraph, PNG_DATA_URI, repeat, row, table, text, zoneRow } from './helpers.ts'
 
 const bold = { type: 'strong' }
 const italic = { type: 'em' }
@@ -30,7 +30,7 @@ describe('Markdown output', () => {
   })
 
   it('writes a repeated table as a GFM table, header row once', async () => {
-    const document = doc(page(repeat('lines', table(row(cell('table_header', text('Item')), cell('table_header', text('Price'))), row(cell('table_cell', field('item.name')), cell('table_cell', field('item.price')))))))
+    const document = doc(page(repeat('lines', table(zoneRow('header', cell('table_header', text('Item')), cell('table_header', text('Price'))), row(cell('table_cell', field('item.name')), cell('table_cell', field('item.price')))))))
     const r = await resolveDocument(document, fakeProvider({ repeats: { lines: { items: [{ 'item.name': 'Tea | green', 'item.price': '3' }, { 'item.name': 'Cake', 'item.price': '5' }], itemFields: ['item.name', 'item.price'] } } }))
     expect(toMarkdown(document, r)).toBe('| Item | Price |\n| --- | --- |\n| Tea \\| green | 3 |\n| Cake | 5 |\n')
   })

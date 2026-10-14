@@ -6,6 +6,7 @@ export type {
   FieldDescriptor,
   ImageProvider,
   ItemFieldDescriptor,
+  ItemValue,
   ItemValues,
   MaybePromise,
   PickedImage,
@@ -25,7 +26,8 @@ export { ALIGNMENTS, editorSchema, FONT_SIZES, FONTS, safeAlignment, safeColour,
 export { EMPTY_DOCUMENT, fieldKey, imageKey, InvalidDocumentError, isEditorDocument, repeatKey, templateKey, toEditorDocument } from './document.ts'
 
 // Resolution and rendering.
-export { createResolver, DEFAULT_MAX_TEMPLATE_DEPTH, EMPTY_RESOLUTION, resolveDocument, sameResolution, toItemContext, type ItemContext, type Resolution, type ResolvedRepeat, type ResolvedTemplate, type Resolver, type ResolveOptions } from './resolve.ts'
+export type { RepeatShape } from './repeat.ts'
+export { createResolver, DEFAULT_MAX_TEMPLATE_DEPTH, EMPTY_RESOLUTION, MAX_REPEAT_NESTING, resolveDocument, sameResolution, toItemContext, type ItemContext, type Resolution, type ResolvedRepeat, type ResolvedTemplate, type Resolver, type ResolveOptions } from './resolve.ts'
 export { embedProblem, expression, renderBlocks, renderDocument, templateOf, type RenderOptions } from './render.ts'
 
 // Commands (for hosts building their own toolbar).

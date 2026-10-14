@@ -38,7 +38,7 @@ function fieldText(node: ProseNode, env: Env): string {
   const name = String(node.attrs.name)
   const key = fieldKey(name, node.attrs.label as string | null)
   if (env.mode === 'expressions') return expression(key)
-  if (env.itemFields?.has(name)) return env.item?.get(key) ?? env.missingItemValue
+  if (env.itemFields?.has(name)) return env.item?.values.get(key) ?? env.missingItemValue
   const value = env.resolution.fields.get(key)
   if (value !== undefined) return value
   return env.mode === 'editor' ? expression(key) : ''
@@ -62,7 +62,7 @@ function renderRepeat(repeat: ProseNode, env: Env): ProseNode[] {
   // Until zones are drawn: a block's blocks are its body's.
   const body = repeat.child(repeat.childCount === 1 ? 0 : repeat.child(0).type === nodes.repeat_header ? 1 : 0)
   const data = env.resolution.repeats.get(source)
-  const itemFields = data?.itemFields ?? env.resolution.itemFieldsOf.get(source) ?? new Set<string>()
+  const itemFields = data?.itemFields ?? env.resolution.shapes.get(source)?.itemFields ?? new Set<string>()
   // Shown as written: with expressions, and in the editor while the block is unresolved.
   if (env.mode === 'expressions' || (env.mode === 'editor' && !data)) {
     return childrenOf(body).flatMap((block) => renderNode(block, { ...env, mode: 'expressions', item: null, itemFields }))

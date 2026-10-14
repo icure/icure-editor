@@ -1,5 +1,5 @@
 // Builders of ProseMirror JSON for the tests, and an in-memory provider.
-import type { EditorDataProvider, RepeatData, TemplateContent } from '../src/context.ts'
+import type { EditorDataProvider, RepeatData, RepeatSourceDescriptor, TemplateContent } from '../src/context.ts'
 import { toEditorDocument } from '../src/document.ts'
 
 export const text = (value: string, marks: object[] = []) => ({ type: 'text', text: value, ...(marks.length > 0 ? { marks } : {}) })
@@ -37,13 +37,15 @@ export interface FakeData {
   readonly repeats?: Record<string, RepeatData>
   readonly templates?: Record<string, Omit<TemplateContent, 'id'>>
   readonly images?: Record<string, string>
+  readonly sources?: readonly RepeatSourceDescriptor[]
 }
 
-export function fakeProvider({ fields = {}, repeats = {}, templates = {}, images = {} }: FakeData): EditorDataProvider & { calls: string[] } {
+export function fakeProvider({ fields = {}, repeats = {}, templates = {}, images = {}, sources = [] }: FakeData): EditorDataProvider & { calls: string[] } {
   const calls: string[] = []
   return {
     calls,
     resolveField: (key) => (calls.push(`field:${key}`), fields[key]),
+    listRepeatSources: () => sources,
     resolveRepeat: async (source) => (calls.push(`repeat:${source}`), repeats[source]),
     loadTemplate: (id) => (calls.push(`template:${id}`), templates[id] ? { id, ...templates[id]! } : null),
     images: { resolve: (id) => (calls.push(`image:${id}`), images[id] ? { src: images[id]! } : null) },

@@ -133,6 +133,15 @@ describe('item scopes', () => {
     expect(r.unresolved.map((u) => u.key)).toEqual(['repeat:programme.days', 'person.lastName'])
   })
 
+  it('sees two resolutions of the same nested document as the same, and a changed shape as different', async () => {
+    const resolver = createResolver(fakeProvider({ fields: { 'person.lastName': 'Doe' }, repeats: { 'programme.days': DAYS } }))
+    const a = await resolver.resolve(nested)
+    const b = await resolver.resolve(nested)
+    expect(sameResolution(a, b)).toBe(true)
+    const other = await resolveDocument(nested, fakeProvider({ fields: { 'person.lastName': 'Doe' }, repeats: { 'programme.days': { ...DAYS, items: [{ 'day.label': 'Saturday', 'day.sessions': { items: [{ 'session.room': 'A' }] } }] } } }))
+    expect(sameResolution(a, other)).toBe(false)
+  })
+
   it('cuts a list that holds itself at the nesting limit', () => {
     const cyclic: { items: object[] } = { items: [] }
     cyclic.items.push({ name: 'x', self: cyclic })

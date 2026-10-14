@@ -1,11 +1,13 @@
 // Pagination: a block that overflows its page moves to the next one, and a page with room pulls the
 // next page's first block back, so the document reads as sheets of the configured format. Measured on
-// the rendered pages; without a layout (tests, a hidden editor) nothing moves. The reflow's moves are
+// the rendered pages; without a layout (tests, a hidden editor) nothing moves, nor while a block is
+// edited in place. The reflow's moves are
 // kept out of the undo history.
 import type { Node as ProseNode } from 'prosemirror-model'
 import { Plugin, type EditorState, type Transaction } from 'prosemirror-state'
 import type { EditorView } from 'prosemirror-view'
 
+import { editingTarget } from './editing.ts'
 import { editorSchema } from './schema.ts'
 
 // A sheet's size and margin, shared by the editor and the HTML output.
@@ -80,7 +82,10 @@ function reflowOnce(view: EditorView): Transaction | null {
   return null
 }
 
+// Nothing moves while a block is open in place: a move would take the block (and its editing area)
+// out of the document. The commit reflows.
 export function reflow(view: EditorView): void {
+  if (editingTarget(view.state)) return
   for (let moves = 0; moves < MAX_MOVES; moves++) {
     const tr = reflowOnce(view)
     if (!tr) return

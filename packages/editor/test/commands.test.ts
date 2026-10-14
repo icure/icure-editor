@@ -1,7 +1,7 @@
 import { EditorState, NodeSelection, TextSelection } from 'prosemirror-state'
 import { describe, expect, it } from 'vitest'
 
-import { insertField, insertImage, insertRepeat, insertTemplate, selectedImage, selectedKey, setAlignment, updateSelectedImage } from '../src/commands.ts'
+import { insertField, repeatContent, insertImage, insertRepeat, insertTemplate, selectedImage, selectedKey, setAlignment, updateSelectedImage } from '../src/commands.ts'
 import { doc, page, paragraph, text } from './helpers.ts'
 
 function stateAt(pos: number) {
@@ -30,10 +30,29 @@ describe('commands', () => {
     expect(block.type.name).toBe('repeat')
     expect(block.textContent).toBe('– , ')
     const tabled = apply(stateAt(7), insertRepeat({ key: 'list', label: 'List', layout: 'table', itemFields: [{ key: 'a', label: 'A' }] }))
-    const tableNode = tabled.doc.child(0).child(1).child(0)
+    const tableNode = tabled.doc.child(0).child(1).child(0).child(0)
     expect(tableNode.type.name).toBe('table')
     expect(tableNode.child(0).child(0).type.name).toBe('table_header')
     expect(tableNode.textContent).toBe('A')
+  })
+
+  it('inserts a valid block for both layouts', () => {
+    for (const layout of ['table', 'lines'] as const) {
+      const next = apply(stateAt(7), insertRepeat({ key: 'list', label: 'List', layout, itemFields: [{ key: 'a', label: 'A' }] }))
+      const block = next.doc.child(0).child(1)
+      expect(block.type.name).toBe('repeat')
+      expect(block.child(0).type.name).toBe('repeat_body')
+      expect(() => next.doc.check()).not.toThrow()
+    }
+  })
+
+  it('inserts a block whose body is a table with a header row', () => {
+    const source = { key: 'list.items', label: 'Items', layout: 'table' as const, itemFields: [{ key: 'item.name', label: 'Name' }] }
+    const body = repeatContent(source)
+    expect(body.type.name).toBe('repeat_body')
+    const table = body.child(0)
+    expect([table.child(0).attrs.zone, table.child(1).attrs.zone]).toEqual(['header', 'body'])
+    expect(table.child(0).textContent).toBe('Name')
   })
 
   it('inserts an embedded template as a block', () => {

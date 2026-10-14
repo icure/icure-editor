@@ -84,15 +84,16 @@ const fieldCell = (name: string) => nodes.table_cell.create(null, nodes.paragrap
 export const LIST_LEAD = '– '
 const SEPARATOR = ', '
 
-// The content a new block starts with: a table (a header row of the item fields' labels, a row of
-// the item fields), or a line per item.
+// The body a new block starts with: a table (a header row of the item fields' labels, a row of the
+// item fields), or a line per item.
 export function repeatContent(source: RepeatSourceDescriptor): ProseNode {
   const fields = source.itemFields
   if (source.layout === 'table' && fields.length > 0) {
-    return nodes.table.create(null, [nodes.table_row.create(null, fields.map((f) => headerCell(f.label))), nodes.table_row.create(null, fields.map((f) => fieldCell(f.key)))])
+    const table = nodes.table.create(null, [nodes.table_row.create({ zone: 'header' }, fields.map((f) => headerCell(f.label))), nodes.table_row.create(null, fields.map((f) => fieldCell(f.key)))])
+    return nodes.repeat_body.create(null, table)
   }
   const inline = fields.flatMap((f, i) => (i === 0 ? [fieldNode(f.key)] : [editorSchema.text(SEPARATOR), fieldNode(f.key)]))
-  return nodes.paragraph.create(null, [editorSchema.text(LIST_LEAD), ...inline])
+  return nodes.repeat_body.create(null, nodes.paragraph.create(null, [editorSchema.text(LIST_LEAD), ...inline]))
 }
 
 export function insertRepeat(source: RepeatSourceDescriptor): Command {

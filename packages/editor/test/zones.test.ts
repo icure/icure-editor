@@ -27,6 +27,15 @@ describe('repeating block zones', () => {
     expect(renderRepeatParts(node, resolution).empty).toBe(true)
   })
 
+  it('splits a zoned block into header, body and footer; an unresolved one is not empty', async () => {
+    const resolved = await draw(block, LIST('A', 'B'))
+    const parts = renderRepeatParts(resolved.node, resolved.resolution)
+    expect([texts(parts.header), texts(parts.body), texts(parts.footer), parts.empty]).toEqual([['Header'], ['– A', '– B'], ['Footer'], false])
+    const unresolved = await draw(block, {})
+    const shown = renderRepeatParts(unresolved.node, unresolved.resolution)
+    expect([texts(shown.header), texts(shown.body), texts(shown.footer), shown.empty]).toEqual([['Header'], ['– {item.name}'], ['Footer'], false])
+  })
+
   it('prints nothing for an unresolved block and shows every zone as written in the editor', async () => {
     const { node, resolution, document } = await draw(block, {})
     expect(renderDocument(document, resolution).textContent).toBe('')

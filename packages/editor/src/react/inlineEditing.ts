@@ -159,6 +159,23 @@ export class EditingLevel {
 
 let nextId = 0
 
+const SVG = 'http://www.w3.org/2000/svg'
+
+// The bar's icons (✓ Done, × Cancel): decorative, drawn in the text colour like the toolbar's.
+const ICONS = { done: ['M20 6 9 17l-5-5'], cancel: ['M18 6 6 18', 'M6 6l12 12'] } as const
+
+function icon(paths: readonly string[]): SVGSVGElement {
+  const svg = document.createElementNS(SVG, 'svg')
+  const attrs = { class: 'ie-icon', viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }
+  for (const [name, value] of Object.entries(attrs)) svg.setAttribute(name, value)
+  for (const d of paths) {
+    const path = document.createElementNS(SVG, 'path')
+    path.setAttribute('d', d)
+    svg.append(path)
+  }
+  return svg
+}
+
 const element = <K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text?: string): HTMLElementTagNameMap[K] => {
   const el = document.createElement(tag)
   el.className = className
@@ -212,17 +229,22 @@ export class InlineSession {
     this.alert.setAttribute('role', 'alert')
     this.actions = element('div', 'ie-inline-actions')
     this.titleText = element('span', 'ie-inline-title', this.title)
-    bar.append(this.titleText, this.hint, this.alert, this.actions)
+    const heading = element('div', 'ie-inline-heading')
+    heading.append(this.titleText, this.hint, this.alert)
+    bar.append(heading, this.actions)
     const mount = element('div', 'ie-inline-canvas')
     this.dom.append(bar, mount)
     this.showEditing()
     // Escape cancels, from the editor or the bar; an inner area handles its own (ProseMirror marks
-    // Escape as handled, so `defaultPrevented` can't tell).
+    // Escape as handled, so `defaultPrevented` can't tell). A tooltip shown in the bar is dismissed
+    // first (WCAG 1.4.13).
     this.dom.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return
       event.preventDefault()
       event.stopPropagation()
-      this.cancel()
+      const tooltip = this.actions.querySelector('.ie-tooltip')
+      if (tooltip) tooltip.remove()
+      else this.cancel()
     })
 
     const done: Command = () => {
@@ -268,10 +290,34 @@ export class InlineSession {
     return button
   }
 
+  // A small square button showing an icon; its name is its `aria-label`, and shows as a tooltip while
+  // it is pointed at or focused (as the toolbar's).
+  private iconButton(label: string, paths: readonly string[], onPress: () => void): HTMLElement {
+    const button = element('button', 'ie-button ie-inline-icon')
+    button.type = 'button'
+    button.setAttribute('aria-label', label)
+    button.append(icon(paths))
+    button.addEventListener('click', onPress)
+    const tip = element('span', 'ie-tip')
+    const show = () => {
+      if (tip.querySelector('.ie-tooltip')) return
+      const bubble = element('span', 'ie-tooltip', label)
+      bubble.setAttribute('aria-hidden', 'true')
+      tip.append(bubble)
+    }
+    const hide = () => tip.querySelector('.ie-tooltip')?.remove()
+    tip.addEventListener('pointerenter', show)
+    tip.addEventListener('pointerleave', hide)
+    button.addEventListener('focus', show)
+    button.addEventListener('blur', hide)
+    tip.append(button)
+    return tip
+  }
+
   private showEditing(): void {
     this.asking = false
     const labels = this.parent.host.labels().inlineEditing
-    this.actions.replaceChildren(this.button(labels.done, () => void this.done()), this.button(labels.cancel, () => this.cancel()))
+    this.actions.replaceChildren(this.iconButton(labels.done, ICONS.done, () => void this.done()), this.iconButton(labels.cancel, ICONS.cancel, () => this.cancel()))
   }
 
   // Done on a template: update the shared template (when the host can save it), make a copy for this

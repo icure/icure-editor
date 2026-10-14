@@ -155,6 +155,23 @@ describe('editing a repeating block in place', () => {
     await waitFor(() => expect(canvas()).toHaveAttribute('contenteditable', 'true'))
   })
 
+  it('shows Done and Cancel as icons named by their labels, with a tooltip Escape dismisses first', async () => {
+    await setup([LIST])
+    fireEvent.dblClick(block())
+    const done = within(area()).getByRole('button', { name: IE.done })
+    const cancel = within(area()).getByRole('button', { name: IE.cancel })
+    for (const button of [done, cancel]) {
+      expect(button).toHaveTextContent('')
+      expect(button.querySelector('svg')).not.toBeNull()
+    }
+    act(() => cancel.focus())
+    expect(area()).toHaveTextContent(IE.cancel)
+    fireEvent.keyDown(cancel, { key: 'Escape', keyCode: 27 })
+    expect(area()).not.toHaveTextContent(IE.cancel)
+    fireEvent.keyDown(cancel, { key: 'Escape', keyCode: 27 })
+    noArea()
+  })
+
   it('cannot be opened when read only', async () => {
     const { ref } = await setup([LIST], { readOnly: true })
     fireEvent.dblClick(block())

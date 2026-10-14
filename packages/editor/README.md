@@ -155,9 +155,9 @@ A repeating block or an embedded template is drawn from data, as one unit. To ch
 place: **double-click** it, or select it (the arrows select it whole) and press **Enter**. It turns
 into an editing area showing its template, fields as placeholders (`{event.title}`), under a bar:
 
-- **Done** (or Ctrl+Enter / ⌘+Enter) applies the changes; **Cancel** (or Escape) discards them,
-  without a question. Clicking elsewhere doesn't leave: the rest of the document waits (it is not
-  editable, and pages are not re-paginated, until the area closes).
+- **Done** (✓, top right; or Ctrl+Enter / ⌘+Enter) applies the changes; **Cancel** (×; or Escape)
+  discards them, without a question. Clicking elsewhere doesn't leave: the rest of the document
+  waits (it is not editable, and pages are not re-paginated, until the area closes).
 - The toolbar acts on the editing area. Undo and redo work inside it; after Done, the whole change
   is one undo step in the document. `getDocument()`, `onChange` and `onEdit` only see the change on
   Done; `editorRef.current.activeView` is the view the toolbar acts on.

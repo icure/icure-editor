@@ -1,0 +1,4 @@
+/* The editor's stylesheet: ProseMirror's own rules, then the editor's. */
+@import 'prosemirror-view/style/prosemirror.css';
+@import 'prosemirror-tables/style/tables.css';
+@import './editor.css';

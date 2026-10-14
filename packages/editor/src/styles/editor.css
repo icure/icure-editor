@@ -1,0 +1,434 @@
+/*
+ * The editor's look, entirely through custom properties: a host themes it by setting any `--ie-*`
+ * variable on `.ie-editor` or an ancestor. Dark mode follows `prefers-color-scheme` unless the host
+ * sets `data-theme` on an ancestor.
+ */
+.ie-editor {
+  --ie-font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ie-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --ie-font-size: 0.875rem;
+  --ie-caption-size: 0.75rem;
+  --ie-ink: #1c1d1f;
+  --ie-ink-muted: #5d6066;
+  --ie-on-ink: #ffffff;
+  --ie-surface: #ffffff;
+  --ie-surface-raised: #ffffff;
+  --ie-surface-sunken: #eef0f3;
+  --ie-line: #c9ccd2;
+  --ie-line-strong: #8a8f98;
+  --ie-focus: #2463eb;
+  --ie-caution-fill: #fff1c2;
+  --ie-caution: #8a5a00;
+  --ie-page-ink: #1c1d1f;
+  --ie-page-surface: #ffffff;
+  --ie-shadow: 0 1px 3px rgb(0 0 0 / 0.18), 0 4px 12px rgb(0 0 0 / 0.08);
+  --ie-space-2xs: 2px;
+  --ie-space-xs: 4px;
+  --ie-space-sm: 8px;
+  --ie-space-md: 16px;
+  --ie-radius-sm: 4px;
+  --ie-radius-md: 8px;
+  --ie-radius-pill: 999px;
+  --ie-control: 2.75rem;
+  --ie-page-width: 210mm;
+  --ie-page-aspect: 210 / 297;
+  --ie-page-margin: 20mm;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--ie-space-sm);
+  min-width: 0;
+  color: var(--ie-ink);
+  font-family: var(--ie-font);
+  font-size: var(--ie-font-size);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .ie-editor {
+    --ie-ink: #e8e9ec;
+    --ie-ink-muted: #a6aab2;
+    --ie-on-ink: #15161a;
+    --ie-surface: #1d1f24;
+    --ie-surface-raised: #262930;
+    --ie-surface-sunken: #121317;
+    --ie-line: #3b3f48;
+    --ie-line-strong: #6b707b;
+    --ie-focus: #7aa2ff;
+    --ie-caution-fill: #4a3a10;
+    --ie-caution: #f2c75c;
+  }
+}
+
+[data-theme='dark'] .ie-editor {
+  --ie-ink: #e8e9ec;
+  --ie-ink-muted: #a6aab2;
+  --ie-on-ink: #15161a;
+  --ie-surface: #1d1f24;
+  --ie-surface-raised: #262930;
+  --ie-surface-sunken: #121317;
+  --ie-line: #3b3f48;
+  --ie-line-strong: #6b707b;
+  --ie-focus: #7aa2ff;
+  --ie-caution-fill: #4a3a10;
+  --ie-caution: #f2c75c;
+}
+
+.ie-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ie-space-xs);
+  padding: var(--ie-space-xs) var(--ie-space-sm);
+  border: 1px solid var(--ie-line);
+  border-radius: var(--ie-radius-md);
+  background: var(--ie-surface-raised);
+}
+
+.ie-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--ie-space-2xs);
+}
+
+/* Target size: 44px by default (touch), 24px+ with a fine pointer that can hover. */
+.ie-button,
+.ie-select,
+.ie-colour {
+  box-sizing: border-box;
+  min-block-size: var(--ie-control);
+  min-inline-size: var(--ie-control);
+  padding: 0 var(--ie-space-sm);
+  border: 1px solid var(--ie-line);
+  border-radius: var(--ie-radius-sm);
+  background: var(--ie-surface);
+  color: var(--ie-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ie-editor {
+    --ie-control: 2rem;
+  }
+}
+
+.ie-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ie-button:focus-visible,
+.ie-select:focus-visible,
+.ie-colour:focus-visible,
+.ie-chip:focus-visible,
+.ie-menu-item:focus-visible {
+  outline: 2px solid var(--ie-focus);
+  outline-offset: 2px;
+}
+
+.ie-tool {
+  border-color: transparent;
+  background: transparent;
+  font-weight: 600;
+}
+
+.ie-tool[aria-pressed='true'] {
+  background: var(--ie-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--ie-line-strong);
+}
+
+.ie-colour {
+  padding: 2px;
+}
+
+.ie-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.ie-menu-popup {
+  position: absolute;
+  inset-block-start: calc(100% + var(--ie-space-xs));
+  inset-inline-start: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 12rem;
+  max-block-size: 60vh;
+  overflow-y: auto;
+  padding: var(--ie-space-xs);
+  border: 1px solid var(--ie-line);
+  border-radius: var(--ie-radius-md);
+  background: var(--ie-surface-raised);
+  box-shadow: var(--ie-shadow);
+}
+
+.ie-menu-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.ie-menu-group-name {
+  padding: var(--ie-space-xs) var(--ie-space-sm) 0;
+  color: var(--ie-ink-muted);
+  font-size: var(--ie-caption-size);
+  text-transform: uppercase;
+}
+
+.ie-menu-item {
+  min-block-size: var(--ie-control);
+  padding: 0 var(--ie-space-sm);
+  border: 0;
+  border-radius: var(--ie-radius-sm);
+  background: transparent;
+  color: var(--ie-ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ie-menu-item:hover,
+.ie-menu-item:focus {
+  background: var(--ie-surface-sunken);
+}
+
+.ie-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ie-space-sm);
+}
+
+.ie-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ie-space-xs);
+  min-block-size: var(--ie-control);
+}
+
+/* The raw expression of the tapped reference (the touch alternative to the hover tooltip). */
+.ie-expression {
+  min-block-size: 1.2em;
+  margin: 0;
+  color: var(--ie-ink-muted);
+  font-family: var(--ie-font-mono);
+  font-size: var(--ie-caption-size);
+}
+
+.ie-message:empty {
+  display: none;
+}
+
+.ie-image-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--ie-space-md);
+  padding: var(--ie-space-sm);
+  border: 1px solid var(--ie-line);
+  border-radius: var(--ie-radius-md);
+  background: var(--ie-surface-raised);
+}
+
+.ie-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ie-space-2xs);
+  min-inline-size: min(100%, 14rem);
+}
+
+.ie-form-row input {
+  min-block-size: var(--ie-control);
+  padding: 0 var(--ie-space-sm);
+  border: 1px solid var(--ie-line);
+  border-radius: var(--ie-radius-sm);
+  background: var(--ie-surface);
+  color: var(--ie-ink);
+  font: inherit;
+}
+
+.ie-hint {
+  color: var(--ie-ink-muted);
+  font-size: var(--ie-caption-size);
+}
+
+.ie-sheets {
+  overflow-x: auto;
+  padding: var(--ie-space-md);
+  border-radius: var(--ie-radius-md);
+  background: var(--ie-surface-sunken);
+}
+
+.ie-canvas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ie-space-md);
+  outline: none;
+}
+
+/* One sheet: the page format's ratio, its overflow measured by the pagination. */
+.ie-canvas .ie-page {
+  box-sizing: border-box;
+  inline-size: min(100%, var(--ie-page-width));
+  aspect-ratio: var(--ie-page-aspect);
+  overflow: hidden;
+  padding: var(--ie-page-margin);
+  background: var(--ie-page-surface);
+  color: var(--ie-page-ink);
+  box-shadow: var(--ie-shadow);
+}
+
+.ie-canvas:focus-visible .ie-page {
+  outline: 2px solid var(--ie-focus);
+}
+
+.ie-page p {
+  min-block-size: 1em;
+  margin: 0;
+}
+
+.ie-page table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.ie-page td,
+.ie-page th {
+  padding: var(--ie-space-2xs) var(--ie-space-xs);
+  border: 1px solid var(--ie-line-strong);
+  vertical-align: top;
+}
+
+.ie-page img {
+  max-inline-size: 100%;
+  block-size: auto;
+  vertical-align: bottom;
+}
+
+.ie-page img.ProseMirror-selectednode {
+  outline: 2px solid var(--ie-focus);
+}
+
+/* A repeating block or an embedded template: drawn from data, framed so it reads as one unit. */
+.ie-repeat,
+.ie-embed {
+  padding: var(--ie-space-2xs);
+  border: 1px dashed var(--ie-line-strong);
+}
+
+.ie-embed-caption {
+  color: var(--ie-ink-muted);
+  font-size: var(--ie-caption-size);
+}
+
+.ie-repeat.ProseMirror-selectednode,
+.ie-embed.ProseMirror-selectednode {
+  outline: 2px solid var(--ie-focus);
+}
+
+/* The editor-only line of a block with nothing to list: never printed. */
+.ie-repeat-empty {
+  margin: 0;
+  color: var(--ie-ink-muted);
+  font-style: italic;
+}
+
+@media print {
+  .ie-repeat,
+  .ie-embed {
+    padding: 0;
+    border: 0;
+  }
+
+  .ie-repeat-empty,
+  .ie-embed-caption {
+    display: none;
+  }
+}
+
+.ie-page .ie-field {
+  position: relative;
+  border-radius: 2px;
+  background: var(--ie-surface-sunken);
+  box-shadow: inset 0 -1px 0 var(--ie-line-strong);
+}
+
+.ie-unresolved-ref,
+.ie-page .ie-unresolved-ref {
+  background: var(--ie-caution-fill);
+  font-family: var(--ie-font-mono);
+}
+
+/* The raw expression on hover (pointer devices); decorative, the tap path is the line above. */
+@media (hover: hover) {
+  .ie-page .ie-field:hover::after {
+    content: attr(data-field);
+    position: absolute;
+    inset-block-end: 100%;
+    inset-inline-start: 0;
+    z-index: 1;
+    padding: var(--ie-space-2xs) var(--ie-space-xs);
+    border-radius: var(--ie-radius-sm);
+    background: var(--ie-ink);
+    color: var(--ie-on-ink);
+    font-family: var(--ie-font-mono);
+    font-size: var(--ie-caption-size);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+}
+
+.ie-unresolved {
+  position: relative;
+}
+
+.ie-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ie-space-xs);
+  min-block-size: var(--ie-control);
+  padding: 0 var(--ie-space-sm);
+  border: 0;
+  border-radius: var(--ie-radius-pill);
+  background: var(--ie-caution-fill);
+  color: var(--ie-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ie-chip-glyph {
+  color: var(--ie-caution);
+}
+
+.ie-unresolved-list {
+  position: absolute;
+  inset-block-start: calc(100% + var(--ie-space-xs));
+  inset-inline-start: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ie-space-xs);
+  inline-size: min(24rem, 90vw);
+  padding: var(--ie-space-sm) var(--ie-space-md);
+  border: 1px solid var(--ie-line);
+  border-radius: var(--ie-radius-md);
+  background: var(--ie-surface-raised);
+  box-shadow: var(--ie-shadow);
+}
+
+.ie-unresolved-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ie-unresolved-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ie-expression-text {
+  font-family: var(--ie-font-mono);
+}

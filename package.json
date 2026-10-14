@@ -1,0 +1,16 @@
+{
+  "name": "icure-editor-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "build": "bun run --filter @icure/editor build",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun run --filter @icure/editor test",
+    "dev": "bun run --filter @icure/editor-demo dev",
+    "test:e2e": "bun run --filter @icure/editor-demo test:e2e"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

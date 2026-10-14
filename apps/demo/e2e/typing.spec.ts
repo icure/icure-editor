@@ -1,0 +1,58 @@
+import { expect, test } from '@playwright/test'
+
+import { canvas, focusEnd, L, open, toolbar } from './helpers.ts'
+
+test.describe('typing and formatting', () => {
+  test('types text and formats it from the toolbar and the keyboard', async ({ page }) => {
+    await open(page, 'blank')
+    await focusEnd(page)
+    await page.keyboard.type('Hello ')
+    await toolbar(page).getByRole('button', { name: L.bold, exact: true }).click()
+    await expect(toolbar(page).getByRole('button', { name: L.bold, exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await page.keyboard.type('bold')
+    await page.keyboard.press('ControlOrMeta+b')
+    await page.keyboard.press('ControlOrMeta+i')
+    await page.keyboard.type(' italic')
+    await expect(canvas(page).locator('strong')).toHaveText('bold')
+    await expect(canvas(page).locator('em')).toHaveText(' italic')
+    await toolbar(page).getByRole('button', { name: L.align.center }).click()
+    await expect(canvas(page).locator('p').first()).toHaveAttribute('style', /text-align: center/)
+    await toolbar(page).getByRole('combobox', { name: L.blockStyle }).selectOption('heading1')
+    await expect(canvas(page).locator('h1')).toHaveText('Hello bold italic')
+  })
+
+  test('undoes and redoes from the toolbar', async ({ page }) => {
+    await open(page, 'blank')
+    await focusEnd(page)
+    await page.keyboard.type('abc')
+    await expect(canvas(page)).toContainText('abc')
+    await toolbar(page).getByRole('button', { name: L.undo }).click()
+    await expect(canvas(page)).not.toContainText('abc')
+    await toolbar(page).getByRole('button', { name: L.redo }).click()
+    await expect(canvas(page)).toContainText('abc')
+  })
+
+  test('inserts a table and moves between its cells with Tab', async ({ page }) => {
+    await open(page, 'blank')
+    await focusEnd(page)
+    await toolbar(page).getByRole('button', { name: L.insertTable }).click()
+    await expect(canvas(page).locator('table td')).toHaveCount(4)
+    await canvas(page).locator('table td').first().click()
+    await page.keyboard.type('A1')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('B1')
+    await expect(canvas(page).locator('table td').nth(1)).toHaveText('B1')
+    await toolbar(page).getByRole('button', { name: L.tableMenu, exact: true }).click()
+    await page.getByRole('menuitem', { name: L.table.addRow }).click()
+    await expect(canvas(page).locator('table td')).toHaveCount(6)
+  })
+
+  test('moves an overflowing block to a new page', async ({ page }) => {
+    await open(page, 'blank')
+    await focusEnd(page)
+    for (let i = 0; i < 70; i++) await page.keyboard.press('Enter')
+    await page.keyboard.type('Last line')
+    await expect(canvas(page).locator('.ie-page')).toHaveCount(2)
+    await expect(canvas(page).locator('.ie-page').nth(1)).toContainText('Last line')
+  })
+})

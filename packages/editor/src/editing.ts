@@ -53,7 +53,8 @@ export function editingTarget(state: EditorState): EditingTarget | null {
   return found ? { pos: found.from, session: (found.spec as Record<string, unknown>)[SESSION_SPEC] } : null
 }
 
-const emptyZone = (zone: ProseNode | null): boolean => !!zone && zone.childCount === 1 && zone.child(0).type === nodes.paragraph && zone.child(0).content.size === 0
+// A zone holding nothing but one empty paragraph.
+export const isEmptyZone = (zone: ProseNode | null): boolean => !!zone && zone.childCount === 1 && zone.child(0).type === nodes.paragraph && zone.child(0).content.size === 0
 
 const zoneChildren = (repeat: ProseNode): ProseNode[] => Array.from({ length: repeat.childCount }, (_, i) => repeat.child(i))
 
@@ -69,7 +70,7 @@ export function withAllZones(repeat: ProseNode): ProseNode {
 // The block without a header or footer left as one empty paragraph (the body always stays).
 export function dropEmptyZones(repeat: ProseNode): ProseNode {
   const zones = zoneChildren(repeat)
-  const kept = zones.filter((zone) => zone.type === nodes.repeat_body || !emptyZone(zone))
+  const kept = zones.filter((zone) => zone.type === nodes.repeat_body || !isEmptyZone(zone))
   return kept.length === zones.length ? repeat : repeat.copy(Fragment.fromArray(kept))
 }
 

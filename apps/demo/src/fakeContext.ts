@@ -1,6 +1,6 @@
 // A fake in-memory data provider: fictitious values, a small delay to show that answers may be
 // asynchronous, an image store holding data: URIs.
-import { blobToDataUri, type EditorDataProvider, type FieldDescriptor, type RepeatData, type RepeatSourceDescriptor } from '@icure/editor'
+import { blobToDataUri, isEditorDocument, type EditorDataProvider, type FieldDescriptor, type RepeatData, type RepeatSourceDescriptor } from '@icure/editor'
 
 import type { AppStrings, Language } from './labels/index.ts'
 import { LOGO_IMAGE_ID, SAMPLE_TEMPLATES } from './samples/templates.ts'
@@ -93,6 +93,11 @@ function repeats(language: Language): Record<string, RepeatData> {
   }
 }
 
+// The template store: the samples, as saved by "Update the shared template". It outlives a language
+// switch and a change of template (not a reload).
+const templateStore = new Map<string, unknown>(SAMPLE_TEMPLATES.map((t) => [t.id, t.content]))
+export const storedTemplate = (id: string): unknown => templateStore.get(id)
+
 // The image store outlives a language switch (uploaded images stay).
 const imageStore = new Map<string, string>([[LOGO_IMAGE_ID, LOGO_DATA_URI]])
 let uploads = 0
@@ -124,9 +129,12 @@ export function createFakeProvider(language: Language, strings: AppStrings): Edi
     listRepeatSources: () => sources,
     resolveRepeat: (source) => later(repeatValues[source]),
     listTemplates: () => SAMPLE_TEMPLATES.filter((t) => t.embeddable).map((t) => ({ id: t.id, name: strings.templateNames[t.id] ?? t.id })),
-    loadTemplate: (id) => {
-      const found = SAMPLE_TEMPLATES.find((t) => t.id === id)
-      return later(found ? { id, name: strings.templateNames[id] ?? id, content: found.content } : null)
+    loadTemplate: (id) => later(templateStore.has(id) ? { id, name: strings.templateNames[id] ?? id, content: templateStore.get(id) } : null),
+    // Only a known template, and only content that fits the editor schema, is stored.
+    saveTemplate: async (id, content) => {
+      if (!templateStore.has(id) || !isEditorDocument(content)) throw new Error('Not a template of this demo')
+      await later(null)
+      templateStore.set(id, content)
     },
     images: {
       resolve: (id) => {

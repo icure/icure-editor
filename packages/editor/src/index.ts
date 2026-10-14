@@ -55,6 +55,8 @@ export {
   type BlockStyle,
   type ImageAttrs,
 } from './commands.ts'
+// Editing blocks in place (row zones of a block's table, for hosts building their own toolbar).
+export { bodyTableRow, editingTarget, setRowZone } from './editing.ts'
 export { A4_PAGE, PAGINATION_META, paginationPlugin, reflow, type PageFormat } from './pagination.ts'
 
 // Images.

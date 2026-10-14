@@ -34,6 +34,18 @@
   --ie-page-width: 210mm;
   --ie-page-aspect: 210 / 297;
   --ie-page-margin: 20mm;
+  /* A block edited in place: its area, bar, zones and placeholders. */
+  --ie-editing-outline: var(--ie-focus);
+  --ie-editing-surface: var(--ie-page-surface);
+  --ie-bar-surface: var(--ie-surface-raised);
+  --ie-bar-ink: var(--ie-ink);
+  /* On the page (light in both themes, like --ie-page-ink). */
+  --ie-zone-caption-ink: #5d6066;
+  --ie-zone-separator: #8a8f98;
+  --ie-placeholder-ink: #5d6066;
+  --ie-zone-header-fill: #e3ecff;
+  --ie-zone-footer-fill: #fdf0d8;
+  --ie-alert-ink: #b3261e;
 
   display: flex;
   flex-direction: column;
@@ -57,6 +69,7 @@
     --ie-focus: #7aa2ff;
     --ie-caution-fill: #4a3a10;
     --ie-caution: #f2c75c;
+    --ie-alert-ink: #ffb4ab;
   }
 }
 
@@ -72,6 +85,7 @@
   --ie-focus: #7aa2ff;
   --ie-caution-fill: #4a3a10;
   --ie-caution: #f2c75c;
+  --ie-alert-ink: #ffb4ab;
 }
 
 .ie-toolbar {
@@ -389,7 +403,8 @@
   animation: ie-gapcursor-blink 1.1s steps(2, start) infinite;
 }
 
-.ie-canvas.ProseMirror-focused .ProseMirror-gapcursor {
+.ie-canvas.ProseMirror-focused .ProseMirror-gapcursor,
+.ie-inline-canvas.ProseMirror-focused .ProseMirror-gapcursor {
   display: block;
 }
 
@@ -509,4 +524,123 @@
 
 .ie-expression-text {
   font-family: var(--ie-font-mono);
+}
+
+/* A block edited in place: the page holding it may grow (pagination waits for Done or Cancel). */
+.ie-canvas .ie-page:has(.ie-editing) {
+  overflow: visible;
+}
+
+.ie-inline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ie-space-xs);
+  margin: var(--ie-space-xs) 0;
+  outline: 2px solid var(--ie-editing-outline);
+  outline-offset: 1px;
+  background: var(--ie-editing-surface);
+}
+
+.ie-inline-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ie-space-xs) var(--ie-space-sm);
+  padding: var(--ie-space-xs) var(--ie-space-sm);
+  background: var(--ie-bar-surface);
+  color: var(--ie-bar-ink);
+  font-family: var(--ie-font);
+  font-size: var(--ie-font-size);
+}
+
+.ie-inline-title {
+  font-weight: 600;
+}
+
+.ie-inline-hint {
+  color: var(--ie-ink-muted);
+  font-size: var(--ie-caption-size);
+}
+
+.ie-inline-alert {
+  color: var(--ie-alert-ink);
+  font-weight: 600;
+}
+
+.ie-inline-alert:empty {
+  display: none;
+}
+
+.ie-inline-actions,
+.ie-inline-question {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ie-space-xs);
+  margin-inline-start: auto;
+}
+
+.ie-inline .ie-button:focus-visible {
+  outline: 2px solid var(--ie-focus);
+  outline-offset: 2px;
+}
+
+.ie-inline-canvas {
+  padding: var(--ie-space-xs) var(--ie-space-sm);
+  outline: none;
+}
+
+/* The template's pages inside the editing area: sections, not sheets. */
+.ie-canvas .ie-inline-canvas .ie-page {
+  inline-size: auto;
+  aspect-ratio: auto;
+  overflow: visible;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ie-canvas .ie-inline-canvas .ie-page + .ie-page {
+  border-block-start: 1px dashed var(--ie-zone-separator);
+}
+
+.ie-zone + .ie-zone {
+  border-block-start: 1px dashed var(--ie-zone-separator);
+}
+
+.ie-zone-caption {
+  color: var(--ie-zone-caption-ink);
+  font-family: var(--ie-font);
+  font-size: var(--ie-caption-size);
+  user-select: none;
+}
+
+.ie-zone-content {
+  position: relative;
+}
+
+.ie-zone[data-empty] > .ie-zone-content::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--ie-placeholder-ink);
+  font-style: italic;
+  pointer-events: none;
+}
+
+/* Row zones of a block's table, while it is edited: a fill and a double rule (not colour alone). */
+.ie-inline-canvas tr[data-zone='header'] {
+  background: var(--ie-zone-header-fill);
+  border-block-end: 3px double var(--ie-zone-separator);
+}
+
+.ie-inline-canvas tr[data-zone='footer'] {
+  background: var(--ie-zone-footer-fill);
+  border-block-start: 3px double var(--ie-zone-separator);
+}
+
+@media print {
+  .ie-inline-bar,
+  .ie-zone-caption {
+    display: none;
+  }
 }

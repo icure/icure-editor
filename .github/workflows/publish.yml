@@ -1,0 +1,76 @@
+# Publishes @icure/editor to npm when a version tag is pushed (v0.1.0, v1.2.0-beta.1…).
+# The tag must match packages/editor/package.json's version. Typecheck, unit tests and e2e must be
+# green first. A prerelease version (with a "-") is published under the `next` dist-tag.
+#
+# Authentication: npm trusted publishing (OIDC, no secret) once it is configured for this repository
+# and workflow on npmjs.com; until then (e.g. the first publish), an `NPM_TOKEN` repository secret.
+name: Publish to npm
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - run: bun install --frozen-lockfile
+
+      - name: Tag matches the package version
+        run: |
+          version=$(node -p "require('./packages/editor/package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match @icure/editor version $version"
+            exit 1
+          fi
+
+      - run: bun run typecheck
+      - run: bun run test
+      - name: Install Chromium for Playwright
+        working-directory: apps/demo
+        run: bunx playwright install --with-deps chromium
+      - run: bun run test:e2e
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing and provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: npm with trusted publishing (11.5.1 or later)
+        run: npm install -g npm@^11.5.1
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+
+      - name: Publish
+        working-directory: packages/editor
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # Provenance requires the package to name the repository it is built from.
+          npm pkg set repository.type=git "repository.url=git+${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" repository.directory=packages/editor
+          version=$(node -p "require('./package.json').version")
+          tag=latest
+          case "$version" in *-*) tag=next ;; esac
+          npm publish --access public --provenance --tag "$tag"

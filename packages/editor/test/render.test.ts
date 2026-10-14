@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { renderBlocks, renderDocument, templateOf } from '../src/render.ts'
 import { resolveDocument } from '../src/resolve.ts'
-import { cell, doc, fakeProvider, field, page, paragraph, repeat, row, table, text } from './helpers.ts'
+import { cell, doc, fakeProvider, field, page, paragraph, repeat, row, table, text, zoneRow } from './helpers.ts'
 
 const texts = (nodes: readonly { readonly textContent: string }[]) => nodes.map((node) => node.textContent)
 const ALLERGIES = { items: [{ 'item.name': 'Peanuts' }, { 'item.name': 'Pollen' }], itemFields: ['item.name', 'item.since'] }
@@ -32,7 +32,7 @@ describe('repeating block expansion', () => {
   })
 
   it('keeps a table header once and repeats its body rows per item', async () => {
-    const { node, resolution } = await blocksOf([table(row(cell('table_header', text('Name'))), row(cell('table_cell', field('item.name'))))], [{ 'item.name': 'A' }, { 'item.name': 'B' }, { 'item.name': 'C' }])
+    const { node, resolution } = await blocksOf([table(zoneRow('header', cell('table_header', text('Name'))), row(cell('table_cell', field('item.name'))))], [{ 'item.name': 'A' }, { 'item.name': 'B' }, { 'item.name': 'C' }])
     const [expanded, ...rest] = renderBlocks(node, resolution)
     expect(rest).toEqual([])
     expect(expanded!.childCount).toBe(4)
@@ -40,9 +40,9 @@ describe('repeating block expansion', () => {
     expanded!.check()
   })
 
-  it('does not draw a table without items, even with its header', async () => {
-    const { node, resolution } = await blocksOf([table(row(cell('table_header', text('Name'))), row(cell('table_cell', field('item.name'))))], [])
-    expect(renderBlocks(node, resolution)).toEqual([])
+  it('keeps the header of an empty table', async () => {
+    const { node, resolution } = await blocksOf([table(zoneRow('header', cell('table_header', text('Name'))), row(cell('table_cell', field('item.name'))))], [])
+    expect(texts(renderBlocks(node, resolution))).toEqual(['Name'])
   })
 
   it('shows the block template with its expressions', async () => {

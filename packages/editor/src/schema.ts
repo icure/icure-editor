@@ -88,6 +88,9 @@ const variable: NodeSpec = {
 const repeat: NodeSpec = {
   group: 'block',
   content: 'block+',
+  // One unit in the editor (drawn from its items, never edited in place): the cursor never enters
+  // its template, the keyboard selects it whole.
+  atom: true,
   isolating: true,
   attrs: { source: { default: '' } },
   toDOM: (node): DOMOutputSpec => ['div', { class: REPEAT_CLASS, 'data-source': String(node.attrs.source) }, 0],

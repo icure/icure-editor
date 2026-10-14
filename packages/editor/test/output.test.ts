@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { toHtml, toHtmlDocument } from '../src/output/html.ts'
+import { htmlDocumentCss, toHtml, toHtmlDocument } from '../src/output/html.ts'
 import { preparePdfmake, renderPdf, toPdfDefinition, type PdfmakeInstance } from '../src/output/pdf.ts'
 import { toPdfContent } from '../src/output/pdfContent.ts'
 import { documentFileName } from '../src/output/browser.ts'
@@ -106,5 +106,18 @@ describe('HTML output', () => {
     expect(html).toContain("default-src 'none'")
     expect(html).toContain('<title>&#60;Confirmation&#62;</title>')
     expect(html).not.toContain('<script')
+  })
+
+  it('sizes each sheet to the page format and prints it on paper of that size with no margin of its own', () => {
+    const html = toHtmlDocument(LETTER, resolution, { title: 'Letter', page: { widthMm: 148, heightMm: 210, marginMm: 12 } })
+    expect(html).toContain('@page{size:148mm 210mm;margin:0}')
+    expect(html).toContain('html,body{margin:0;padding:0}')
+    expect(html).toMatch(/\.ie-page\{box-sizing:border-box;width:148mm;height:210mm;[^}]*padding:12mm/)
+    expect(html).toMatch(/@media print\{html,body\{width:148mm;[^}]*\}\.ie-page\{margin:0;box-shadow:none\}\}/)
+  })
+
+  it('defaults to A4 with 20 mm margins and ignores a page size that is not a length', () => {
+    expect(toHtmlDocument(LETTER, resolution, { title: 'Letter' })).toMatch(/@page\{size:210mm 297mm;margin:0\}[\s\S]*padding:20mm/)
+    expect(htmlDocumentCss({ widthMm: Number.NaN, heightMm: -1, marginMm: 'x' as never })).toContain('@page{size:210mm 297mm;margin:0}')
   })
 })

@@ -69,6 +69,32 @@ describe('the document editor', () => {
     await waitFor(() => expect(canvas()).toHaveTextContent('Doe'))
   })
 
+  it('shows icons in the toolbar and names each in a tooltip on hover or keyboard focus', async () => {
+    const user = userEvent.setup()
+    render(<DocumentEditor initial={docJson(page(paragraph(text('Hello '))))} provider={provider()} />)
+    const toolbar = screen.getByRole('toolbar', { name: 'Formatting' })
+    const insertField = await within(toolbar).findByRole('button', { name: 'Insert field' })
+    for (const name of ['Insert table', 'Table', 'Insert field', 'Insert repeating block', 'Insert template']) {
+      const button = within(toolbar).getByRole('button', { name })
+      expect(button).toHaveTextContent('')
+      expect(button.querySelector('svg')).not.toBeNull()
+    }
+    expect(within(toolbar).queryByText('Insert field')).toBeNull()
+    await user.hover(insertField)
+    expect(within(toolbar).getByText('Insert field')).toBeVisible()
+    await user.keyboard('{Escape}')
+    expect(within(toolbar).queryByText('Insert field')).toBeNull()
+    await user.unhover(insertField)
+    await user.click(insertField)
+    expect(screen.getByRole('menu', { name: 'Insert field' })).toBeInTheDocument()
+    expect(within(toolbar).queryByText('Insert field', { selector: '.ie-tooltip' })).toBeNull()
+    await user.keyboard('{Escape}')
+    await user.tab()
+    await user.tab({ shift: true })
+    expect(insertField).toHaveFocus()
+    expect(within(toolbar).getByText('Insert field', { selector: '.ie-tooltip' })).toBeVisible()
+  })
+
   it('does not offer the document itself as a template to embed', async () => {
     const user = userEvent.setup()
     render(<DocumentEditor documentId="signature" initial={docJson(page(paragraph()))} provider={provider({ listTemplates: () => [{ id: 'signature', name: 'Signature' }, { id: 'footer', name: 'Footer' }] })} />)

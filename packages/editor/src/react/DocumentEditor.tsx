@@ -4,6 +4,7 @@
 // under the toolbar when a reference is tapped, and in place with "Show expressions". The document
 // lives in memory only: the host decides what to persist (onEdit).
 import { baseKeymap } from 'prosemirror-commands'
+import { gapCursor } from 'prosemirror-gapcursor'
 import { history, redo, undo } from 'prosemirror-history'
 import { keymap } from 'prosemirror-keymap'
 import type { Node as ProseNode } from 'prosemirror-model'
@@ -17,7 +18,7 @@ import type { EditorDataProvider, FieldDescriptor, PickedImage, RepeatSourceDesc
 import { toEditorDocument } from '../document.ts'
 import { checkImageFile, DEFAULT_MAX_IMAGE_BYTES, IMAGE_TYPES, type ImageFileError, type ImageType } from '../images.ts'
 import { mergeLabels, type PartialLabels } from '../labels.ts'
-import { PAGINATION_META, paginationPlugin, reflow } from '../pagination.ts'
+import { A4_PAGE, PAGINATION_META, paginationPlugin, reflow, type PageFormat } from '../pagination.ts'
 import { expression } from '../render.ts'
 import { createResolver, DEFAULT_MAX_TEMPLATE_DEPTH, EMPTY_RESOLUTION, sameResolution, type Resolution } from '../resolve.ts'
 import { ImagePanel } from './ImagePanel.tsx'
@@ -25,12 +26,6 @@ import { nodeViews } from './nodeViews.ts'
 import { Toolbar } from './Toolbar.tsx'
 import { UnresolvedChip } from './UnresolvedChip.tsx'
 
-export interface PageFormat {
-  readonly widthMm: number
-  readonly heightMm: number
-  readonly marginMm: number
-}
-export const A4_PAGE: PageFormat = { widthMm: 210, heightMm: 297, marginMm: 20 }
 
 export interface DocumentEditorHandle {
   readonly view: EditorView | null
@@ -69,7 +64,7 @@ const KEYMAP: Record<string, Command> = { 'Mod-b': toggleStrong, 'Mod-i': toggle
 const TABLE_COMMANDS = { addRow: addRowAfter, addColumn: addColumnAfter, deleteRow, deleteColumn }
 
 function createState(doc: ProseNode): EditorState {
-  return EditorState.create({ doc, plugins: [history(), keymap(KEYMAP), keymap(baseKeymap), tableEditing(), paginationPlugin()] })
+  return EditorState.create({ doc, plugins: [history(), keymap(KEYMAP), keymap(baseKeymap), gapCursor(), tableEditing(), paginationPlugin()] })
 }
 
 // The provider's offers (fields, blocks, templates), loaded once per provider.

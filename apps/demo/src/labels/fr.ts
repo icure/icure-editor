@@ -61,6 +61,8 @@ export const fr: LabelSet = {
     output: 'Sortie',
     preview: 'Aperçu de la sortie',
     previewTitle: 'Aperçu de la sortie',
+    markdown: 'Voir le Markdown',
+    markdownTitle: 'Sortie en Markdown',
     downloadHtml: 'Télécharger le HTML',
     downloadPdf: 'Télécharger le PDF',
     printPdf: 'Imprimer',

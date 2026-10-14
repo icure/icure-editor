@@ -8,6 +8,14 @@ import type { EditorView } from 'prosemirror-view'
 
 import { editorSchema } from './schema.ts'
 
+// A sheet's size and margin, shared by the editor and the HTML output.
+export interface PageFormat {
+  readonly widthMm: number
+  readonly heightMm: number
+  readonly marginMm: number
+}
+export const A4_PAGE: PageFormat = { widthMm: 210, heightMm: 297, marginMm: 20 }
+
 // One reflow moves at most this many blocks, so a block taller than a page can't loop.
 const MAX_MOVES = 50
 // Marks a transaction as the pagination's own (not a user edit).

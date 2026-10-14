@@ -14,6 +14,8 @@ export interface AppStrings {
   readonly output: string
   readonly preview: string
   readonly previewTitle: string
+  readonly markdown: string
+  readonly markdownTitle: string
   readonly downloadHtml: string
   readonly downloadPdf: string
   readonly printPdf: string

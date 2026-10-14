@@ -13,6 +13,8 @@ export const en: LabelSet = {
     output: 'Output',
     preview: 'Preview output',
     previewTitle: 'Output preview',
+    markdown: 'View Markdown',
+    markdownTitle: 'Output as Markdown',
     downloadHtml: 'Download HTML',
     downloadPdf: 'Download PDF',
     printPdf: 'Print',

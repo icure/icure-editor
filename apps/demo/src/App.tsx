@@ -1,6 +1,6 @@
 // The demo: a template picker, the editor over a fake in-memory provider, the output (HTML preview,
-// PDF download and print), a language and a theme switch. All state is in the URL.
-import { documentFileName, DocumentEditor, downloadBytes, HTML_TYPE, PDF_TYPE, printPdf, resolveDocument, toHtmlDocument, type DocumentEditorHandle } from '@icure/editor'
+// raw Markdown, HTML and PDF download, print), a language and a theme switch. All state is in the URL.
+import { documentFileName, DocumentEditor, downloadBytes, HTML_TYPE, PDF_TYPE, printPdf, resolveDocument, toHtmlDocument, toMarkdown, type DocumentEditorHandle } from '@icure/editor'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { createFakeProvider, DEMO_DAY } from './fakeContext.ts'
@@ -26,7 +26,8 @@ export function App() {
   const provider = useMemo(() => createFakeProvider(state.language, strings), [state.language, strings])
   const template = sampleTemplate(state.template)!
   const editor = useRef<DocumentEditorHandle>(null)
-  const [preview, setPreview] = useState<string | null>(null)
+  // The output, shown as rendered HTML (preview) or as raw Markdown.
+  const [output, setOutput] = useState<{ readonly view: 'preview' | 'markdown'; readonly text: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const name = strings.templateNames[template.id] ?? template.id
 
@@ -36,13 +37,21 @@ export function App() {
     if (!doc) return null
     return { doc, resolution: await resolveDocument(doc, provider, { rootId: template.id }) }
   }
-  const showPreview = async () => {
+  const html = async () => {
     const out = await current()
-    if (out) setPreview(toHtmlDocument(out.doc, out.resolution, { title: name, lang: state.language }))
+    return out ? toHtmlDocument(out.doc, out.resolution, { title: name, lang: state.language }) : null
+  }
+  const showPreview = async () => {
+    const out = await html()
+    if (out) setOutput({ view: 'preview', text: out })
+  }
+  const showMarkdown = async () => {
+    const out = await current()
+    if (out) setOutput({ view: 'markdown', text: toMarkdown(out.doc, out.resolution) })
   }
   const downloadHtml = async () => {
-    const out = await current()
-    if (out) downloadBytes(toHtmlDocument(out.doc, out.resolution, { title: name, lang: state.language }), documentFileName(name, DEMO_DAY, 'html'), HTML_TYPE)
+    const out = await html()
+    if (out) downloadBytes(out, documentFileName(name, DEMO_DAY, 'html'), HTML_TYPE)
   }
   const pdf = async (then: (bytes: Uint8Array) => void) => {
     setBusy(true)
@@ -99,7 +108,7 @@ export function App() {
                   aria-current={t.id === template.id ? 'page' : undefined}
                   onClick={(e) => {
                     e.preventDefault()
-                    setPreview(null)
+                    setOutput(null)
                     update({ template: t.id })
                   }}
                 >
@@ -116,8 +125,11 @@ export function App() {
           <section aria-label={strings.output} className="demo-output">
             <h2>{strings.output}</h2>
             <div className="demo-actions">
-              <button type="button" onClick={() => void showPreview()}>
+              <button type="button" aria-pressed={output?.view === 'preview'} onClick={() => void showPreview()}>
                 {strings.preview}
+              </button>
+              <button type="button" aria-pressed={output?.view === 'markdown'} onClick={() => void showMarkdown()}>
+                {strings.markdown}
               </button>
               <button type="button" onClick={() => void downloadHtml()}>
                 {strings.downloadHtml}
@@ -130,7 +142,13 @@ export function App() {
               </button>
             </div>
             {/* The output in an empty-sandbox frame: no script, nothing from the network. */}
-            {preview && <iframe className="demo-preview" title={strings.previewTitle} sandbox="" srcDoc={preview} />}
+            {output?.view === 'preview' && <iframe className="demo-preview" title={strings.previewTitle} sandbox="" srcDoc={output.text} />}
+            {/* The raw Markdown, as text. */}
+            {output?.view === 'markdown' && (
+              <pre className="demo-markdown" role="region" aria-label={strings.markdownTitle} tabIndex={0}>
+                <code>{output.text}</code>
+              </pre>
+            )}
           </section>
         </main>
       </div>

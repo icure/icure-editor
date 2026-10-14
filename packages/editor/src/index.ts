@@ -53,7 +53,7 @@ export {
   type BlockStyle,
   type ImageAttrs,
 } from './commands.ts'
-export { PAGINATION_META, paginationPlugin, reflow } from './pagination.ts'
+export { A4_PAGE, PAGINATION_META, paginationPlugin, reflow, type PageFormat } from './pagination.ts'
 
 // Images.
 export {
@@ -77,13 +77,14 @@ export {
 export { DEFAULT_LABELS, mergeLabels, type EditorLabels, type PartialLabels, type ShownAlignment, type TableAction } from './labels.ts'
 
 // Output.
-export { createSerializer, toHtml, toHtmlDocument, toHtmlFragment, type HtmlDocumentOptions, type HtmlOptions, type SerializerOptions } from './output/html.ts'
+export { createSerializer, htmlDocumentCss, toHtml, toHtmlDocument, toHtmlFragment, type HtmlDocumentOptions, type HtmlOptions, type SerializerOptions } from './output/html.ts'
+export { PAGE_BREAK, toMarkdown, type MarkdownOptions } from './output/markdown.ts'
 export { DEFAULT_MARGIN_MM, mm, PAGE_SIZES, toPdfContent, type PageSize, type PdfAlignment, type PdfBlock, type PdfContent, type PdfContentOptions, type TextRun } from './output/pdfContent.ts'
 export { DEFAULT_PDF_FONT, preparePdfmake, renderPdf, toPdfDefinition, type DocDefinition, type PdfDefinitionOptions, type PdfFonts, type PdfmakeInstance } from './output/pdf.ts'
 export { documentFileName, downloadBytes, fileDay, HTML_TYPE, PDF_TYPE, printPdf, safeFileSegment, withPdfImages } from './output/browser.ts'
 
 // React components.
-export { A4_PAGE, DocumentEditor, type DocumentEditorHandle, type DocumentEditorProps, type PageFormat } from './react/DocumentEditor.tsx'
+export { DocumentEditor, type DocumentEditorHandle, type DocumentEditorProps } from './react/DocumentEditor.tsx'
 export { Toolbar, type ToolbarProps } from './react/Toolbar.tsx'
 export { Menu, type MenuItem } from './react/Menu.tsx'
 export { UnresolvedChip, type UnresolvedChipProps } from './react/UnresolvedChip.tsx'

@@ -9,6 +9,7 @@ import { renderDocument } from '../render.ts'
 import type { Resolution } from '../resolve.ts'
 import { expression } from '../render.ts'
 import { imageKey } from '../document.ts'
+import { A4_PAGE, type PageFormat } from '../pagination.ts'
 
 export interface SerializerOptions {
   // What an image without a resolved source draws: nothing (output) or its expression (editor).
@@ -58,14 +59,37 @@ const escapeText = (value: string): string => value.replace(/[&<>"']/g, (c) => `
 export interface HtmlDocumentOptions extends HtmlOptions {
   readonly title: string
   readonly lang?: string
-  // Page size and margin of the printed sheets (CSS `@page`).
-  readonly pageSize?: string
-  readonly marginMm?: number
+  // The sheets' size and margin, as in the editor (default A4, 20 mm).
+  readonly page?: PageFormat
+}
+
+// A length in millimetres for the stylesheet: a finite, non-negative number, else the fallback.
+const millimetres = (value: number, fallback: number): string => `${Number.isFinite(value) && value >= 0 ? value : fallback}mm`
+
+// The file's stylesheet: each `div.ie-page` is one sheet of the page format, its margin as padding,
+// laid out like the editor's page (same font and size, so the editor's pagination holds). On screen
+// the sheets are stacked on a grey backdrop; printed, the paper is the page format with no margin of
+// its own, so each sheet fills exactly one page.
+export function htmlDocumentCss(page: PageFormat = A4_PAGE): string {
+  const width = millimetres(page.widthMm, A4_PAGE.widthMm)
+  const height = millimetres(page.heightMm, A4_PAGE.heightMm)
+  const margin = millimetres(page.marginMm, A4_PAGE.marginMm)
+  return [
+    `@page{size:${width} ${height};margin:0}`,
+    'html,body{margin:0;padding:0}',
+    "body{background:#e8eaed;color:#1c1d1f;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;-webkit-print-color-adjust:exact;print-color-adjust:exact}",
+    `.ie-page{box-sizing:border-box;width:${width};height:${height};margin:8mm auto;padding:${margin};overflow:hidden;background:#fff;box-shadow:0 1px 3px rgb(0 0 0 / 0.18),0 4px 12px rgb(0 0 0 / 0.08);break-after:page}`,
+    '.ie-page:last-child{break-after:auto}',
+    '.ie-page p{margin:0;min-height:1em}',
+    '.ie-page table{border-collapse:collapse;width:100%}',
+    '.ie-page td,.ie-page th{border:1px solid #8a8f98;padding:2px 4px;vertical-align:top}',
+    '.ie-page img{max-width:100%;height:auto;vertical-align:bottom}',
+    `@media print{html,body{width:${width};background:none}.ie-page{margin:0;box-shadow:none}}`,
+  ].join('')
 }
 
 // A standalone HTML file: one sheet per page, a restrictive CSP (no script, images from data: only).
-export function toHtmlDocument(doc: ProseNode, resolution: Resolution, { title, lang = 'en', pageSize = 'A4', marginMm = 20, ...options }: HtmlDocumentOptions): string {
+export function toHtmlDocument(doc: ProseNode, resolution: Resolution, { title, lang = 'en', page = A4_PAGE, ...options }: HtmlDocumentOptions): string {
   const body = toHtml(doc, resolution, options)
-  const css = `@page{size:${pageSize.replace(/[^A-Za-z0-9 ]/g, '')};margin:${Number(marginMm) || 0}mm}body{font-family:sans-serif;margin:0}.ie-page{break-after:page}.ie-page:last-child{break-after:auto}.ie-page p{margin:0;min-height:1em}table{border-collapse:collapse;width:100%}td,th{border:1px solid #888;padding:2px 4px;vertical-align:top}img{max-width:100%}`
-  return `<!doctype html><html lang="${escapeText(lang)}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data: blob: https:"><title>${escapeText(title)}</title><style>${css}</style></head><body>${body}</body></html>`
+  return `<!doctype html><html lang="${escapeText(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data: blob: https:"><title>${escapeText(title)}</title><style>${htmlDocumentCss(page)}</style></head><body>${body}</body></html>`
 }

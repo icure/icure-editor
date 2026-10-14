@@ -23,7 +23,9 @@ import {
 import type { FieldDescriptor, RepeatSourceDescriptor, TemplateSummary } from '../context.ts'
 import type { EditorLabels, ShownAlignment, TableAction } from '../labels.ts'
 import { editorSchema, FONT_SIZES, FONTS } from '../schema.ts'
+import { AlignIcon, FieldIcon, ImageIcon, InsertTableIcon, RedoIcon, RepeatIcon, TableIcon, TemplateIcon, UndoIcon } from './icons.tsx'
 import { Menu } from './Menu.tsx'
+import { Tooltip } from './Tooltip.tsx'
 
 const { marks } = editorSchema
 const SHOWN_ALIGNMENTS: readonly ShownAlignment[] = ['left', 'center', 'right', 'justify']
@@ -48,7 +50,8 @@ export interface ToolbarProps {
 
 interface ToolButtonProps {
   readonly label: string
-  readonly glyph: string
+  // An icon, or a short glyph from the labels (B, I, U).
+  readonly glyph: ReactNode
   readonly active?: boolean
   readonly disabled?: boolean
   readonly onPress: () => void
@@ -56,17 +59,19 @@ interface ToolButtonProps {
 
 function ToolButton({ label, glyph, active, disabled, onPress }: ToolButtonProps) {
   return (
-    <button type="button" className="ie-button ie-tool" aria-label={label} aria-pressed={active} disabled={disabled} onMouseDown={(e) => e.preventDefault()} onClick={onPress}>
-      <span aria-hidden="true">{glyph}</span>
-    </button>
+    <Tooltip text={label}>
+      <button type="button" className="ie-button ie-tool" aria-label={label} aria-pressed={active} disabled={disabled} onMouseDown={(e) => e.preventDefault()} onClick={onPress}>
+        <span aria-hidden="true">{glyph}</span>
+      </button>
+    </Tooltip>
   )
 }
 
 export function Toolbar({ state, run, labels, fields, repeatSources, templates, onInsertImage, tableCommands, undo, redo, children }: ToolbarProps) {
   return (
     <div role="toolbar" aria-label={labels.toolbar} className="ie-toolbar">
-      <ToolButton label={labels.undo} glyph="↶" disabled={!undo(state)} onPress={() => run(undo)} />
-      <ToolButton label={labels.redo} glyph="↷" disabled={!redo(state)} onPress={() => run(redo)} />
+      <ToolButton label={labels.undo} glyph={<UndoIcon />} disabled={!undo(state)} onPress={() => run(undo)} />
+      <ToolButton label={labels.redo} glyph={<RedoIcon />} disabled={!redo(state)} onPress={() => run(redo)} />
       <select className="ie-select" aria-label={labels.blockStyle} value={blockStyleOf(state)} onChange={(e) => run(setBlockStyle(e.target.value as BlockStyle))}>
         {BLOCK_STYLES.map((style) => (
           <option key={style} value={style}>
@@ -97,24 +102,20 @@ export function Toolbar({ state, run, labels, fields, repeatSources, templates, 
       <ToolButton label={labels.bold} glyph={labels.boldGlyph} active={isMarkActive(state, marks.strong)} onPress={() => run(toggleStrong)} />
       <ToolButton label={labels.italic} glyph={labels.italicGlyph} active={isMarkActive(state, marks.em)} onPress={() => run(toggleEm)} />
       <ToolButton label={labels.underline} glyph={labels.underlineGlyph} active={isMarkActive(state, marks.underlined)} onPress={() => run(toggleUnderline)} />
-      <input type="color" className="ie-colour" aria-label={labels.colour} defaultValue={DEFAULT_INK} onChange={(e) => run(setStyleMark(marks.color, { color: e.target.value }))} />
+      <Tooltip text={labels.colour}>
+        <input type="color" className="ie-colour" aria-label={labels.colour} defaultValue={DEFAULT_INK} onChange={(e) => run(setStyleMark(marks.color, { color: e.target.value }))} />
+      </Tooltip>
       <div role="group" aria-label={labels.alignment} className="ie-group">
         {SHOWN_ALIGNMENTS.map((align) => (
-          <ToolButton key={align} label={labels.align[align]} glyph={labels.alignGlyph[align]} active={alignmentOf(state) === align} onPress={() => run(setAlignment(align))} />
+          <ToolButton key={align} label={labels.align[align]} glyph={<AlignIcon align={align} />} active={alignmentOf(state) === align} onPress={() => run(setAlignment(align))} />
         ))}
       </div>
-      <button type="button" className="ie-button" onMouseDown={(e) => e.preventDefault()} onClick={() => run(insertTable)}>
-        {labels.insertTable}
-      </button>
-      <Menu label={labels.tableMenu} items={TABLE_ACTIONS.map((id) => ({ id, label: labels.table[id], onSelect: () => run(tableCommands[id]) }))} />
-      {fields.length > 0 && <Menu label={labels.insertField} items={fields.map((f) => ({ id: f.key, label: f.label, ...(f.group ? { group: f.group } : {}), onSelect: () => run(insertField(f.key)) }))} />}
-      {repeatSources.length > 0 && <Menu label={labels.insertBlock} items={repeatSources.map((s) => ({ id: s.key, label: s.label, onSelect: () => run(insertRepeat(s)) }))} />}
-      {templates.length > 0 && <Menu label={labels.insertTemplate} items={templates.map((t) => ({ id: t.id, label: t.name, onSelect: () => run(insertTemplate(t.id)) }))} />}
-      {onInsertImage && (
-        <button type="button" className="ie-button" onMouseDown={(e) => e.preventDefault()} onClick={onInsertImage}>
-          {labels.insertImage}
-        </button>
-      )}
+      <ToolButton label={labels.insertTable} glyph={<InsertTableIcon />} onPress={() => run(insertTable)} />
+      <Menu label={labels.tableMenu} icon={<TableIcon />} items={TABLE_ACTIONS.map((id) => ({ id, label: labels.table[id], onSelect: () => run(tableCommands[id]) }))} />
+      {fields.length > 0 && <Menu label={labels.insertField} icon={<FieldIcon />} items={fields.map((f) => ({ id: f.key, label: f.label, ...(f.group ? { group: f.group } : {}), onSelect: () => run(insertField(f.key)) }))} />}
+      {repeatSources.length > 0 && <Menu label={labels.insertBlock} icon={<RepeatIcon />} items={repeatSources.map((s) => ({ id: s.key, label: s.label, onSelect: () => run(insertRepeat(s)) }))} />}
+      {templates.length > 0 && <Menu label={labels.insertTemplate} icon={<TemplateIcon />} items={templates.map((t) => ({ id: t.id, label: t.name, onSelect: () => run(insertTemplate(t.id)) }))} />}
+      {onInsertImage && <ToolButton label={labels.insertImage} glyph={<ImageIcon />} onPress={onInsertImage} />}
       {children}
     </div>
   )

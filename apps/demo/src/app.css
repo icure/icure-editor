@@ -160,3 +160,22 @@ body {
   border: 1px solid var(--demo-line);
   background: #ffffff;
 }
+
+.demo-markdown {
+  max-height: 32rem;
+  margin: 0.75rem 0 0;
+  padding: 0.75rem;
+  overflow: auto;
+  border: 1px solid var(--demo-line);
+  border-radius: 6px;
+  background: var(--demo-raised);
+  color: var(--demo-ink);
+  font: 0.8125rem/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.demo-markdown:focus-visible {
+  outline: 2px solid var(--demo-accent);
+  outline-offset: 2px;
+}

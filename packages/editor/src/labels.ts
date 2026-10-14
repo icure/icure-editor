@@ -25,7 +25,6 @@ export interface EditorLabels {
   readonly colour: string
   readonly alignment: string
   readonly align: Readonly<Record<ShownAlignment, string>>
-  readonly alignGlyph: Readonly<Record<ShownAlignment, string>>
   readonly insertTable: string
   readonly tableMenu: string
   readonly table: Readonly<Record<TableAction, string>>
@@ -79,7 +78,6 @@ export const DEFAULT_LABELS: EditorLabels = {
   colour: 'Text colour',
   alignment: 'Alignment',
   align: { left: 'Align left', center: 'Centre', right: 'Align right', justify: 'Justify' },
-  alignGlyph: { left: '⇤', center: '↔', right: '⇥', justify: '☰' },
   insertTable: 'Insert table',
   tableMenu: 'Table',
   table: { addRow: 'Add row', addColumn: 'Add column', deleteRow: 'Delete row', deleteColumn: 'Delete column' },

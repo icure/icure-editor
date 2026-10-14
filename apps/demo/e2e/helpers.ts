@@ -1,7 +1,7 @@
 // Shared e2e helpers. Labels are read from the library's defaults and the demo's label sets, never
 // written as literals, so a label change can't silently break a selector.
 import { DEFAULT_LABELS, expression } from '@icure/editor'
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 
 import { LABEL_SETS } from '../src/labels/index.ts'
 
@@ -16,6 +16,13 @@ export const editorPage = (page: Page, index = 0) => canvas(page).locator('.ie-p
 export async function open(page: Page, template: string, query = ''): Promise<void> {
   await page.goto(`/?template=${template}${query}`)
   await expect(canvas(page)).toBeVisible()
+}
+
+// Clicks into the canvas and lets the editor read the new cursor position (it follows the browser's
+// selectionchange event, which a key pressed at once would outrun).
+export async function clickInto(page: Page, target: Locator): Promise<void> {
+  await target.click()
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => resolve(null))))
 }
 
 // The cursor at the end of the document's last paragraph.

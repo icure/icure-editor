@@ -1,7 +1,9 @@
 // Menu button (WAI-ARIA menu pattern): Enter, Space and the arrow keys open it on the first item,
 // arrows and Home / End move, Escape closes and returns focus to the trigger, Tab leaves (no keyboard
 // trap), a pointer press outside closes it. Consecutive items of one group are shown under its name.
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+
+import { Tooltip } from './Tooltip.tsx'
 
 export interface MenuItem {
   readonly id: string
@@ -14,6 +16,8 @@ interface MenuProps {
   readonly label: string
   readonly items: readonly MenuItem[]
   readonly disabled?: boolean
+  // Shown in place of the label, which then names the trigger and appears in its tooltip.
+  readonly icon?: ReactNode
 }
 
 interface Segment {
@@ -31,7 +35,7 @@ function segmentsOf(items: readonly MenuItem[]): Segment[] {
   return segments
 }
 
-export function Menu({ label, items, disabled = false }: MenuProps) {
+export function Menu({ label, items, disabled = false, icon }: MenuProps) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const menuId = useId()
@@ -87,23 +91,28 @@ export function Menu({ label, items, disabled = false }: MenuProps) {
     }
   }
 
+  const trigger = (
+    <button
+      ref={triggerRef}
+      type="button"
+      className={icon ? 'ie-button ie-tool' : 'ie-button'}
+      aria-label={icon ? label : undefined}
+      aria-haspopup="menu"
+      aria-expanded={open}
+      aria-controls={open ? menuId : undefined}
+      disabled={disabled || items.length === 0}
+      // Keeps the editor's selection: the menu acts on it.
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => (open ? close(false) : openAt(0))}
+      onKeyDown={onTriggerKeyDown}
+    >
+      {icon ?? label}
+    </button>
+  )
+
   return (
     <div className="ie-menu" ref={rootRef}>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="ie-button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        disabled={disabled || items.length === 0}
-        // Keeps the editor's selection: the menu acts on it.
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={() => (open ? close(false) : openAt(0))}
-        onKeyDown={onTriggerKeyDown}
-      >
-        {label}
-      </button>
+      {icon ? <Tooltip text={label} suppressed={open}>{trigger}</Tooltip> : trigger}
       {open && (
         <div id={menuId} className="ie-menu-popup" role="menu" aria-label={label} onKeyDown={onMenuKeyDown}>
           {segmentsOf(items).map((segment, segmentIndex) => {

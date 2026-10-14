@@ -30,6 +30,7 @@
   --ie-radius-md: 8px;
   --ie-radius-pill: 999px;
   --ie-control: 2.75rem;
+  --ie-icon-size: 1.125rem;
   --ie-page-width: 210mm;
   --ie-page-aspect: 210 / 297;
   --ie-page-margin: 20mm;
@@ -127,6 +128,9 @@
 }
 
 .ie-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-color: transparent;
   background: transparent;
   font-weight: 600;
@@ -137,8 +141,49 @@
   box-shadow: inset 0 0 0 1px var(--ie-line-strong);
 }
 
+.ie-icon {
+  display: block;
+  inline-size: var(--ie-icon-size);
+  block-size: var(--ie-icon-size);
+}
+
 .ie-colour {
   padding: 2px;
+}
+
+/* The name of an icon-only control, under it; a bridge keeps it while the pointer moves onto it. */
+.ie-tip {
+  position: relative;
+  display: inline-flex;
+}
+
+.ie-tooltip {
+  position: absolute;
+  inset-block-start: calc(100% + var(--ie-space-xs));
+  inset-inline-start: 50%;
+  z-index: 11;
+  padding: var(--ie-space-2xs) var(--ie-space-sm);
+  border-radius: var(--ie-radius-sm);
+  background: var(--ie-ink);
+  color: var(--ie-on-ink);
+  font-size: var(--ie-caption-size);
+  font-weight: normal;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.ie-tooltip::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 100%;
+  block-size: var(--ie-space-xs);
+}
+
+@media print {
+  .ie-tooltip {
+    display: none;
+  }
 }
 
 .ie-menu {
@@ -325,6 +370,39 @@
 .ie-repeat.ProseMirror-selectednode,
 .ie-embed.ProseMirror-selectednode {
   outline: 2px solid var(--ie-focus);
+}
+
+/* The cursor between two blocks without text (a repeating block, an embedded template, a table). */
+.ie-canvas .ProseMirror-gapcursor {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+}
+
+.ie-canvas .ProseMirror-gapcursor::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset-block-start: -2px;
+  inline-size: 20px;
+  border-block-start: 2px solid var(--ie-focus);
+  animation: ie-gapcursor-blink 1.1s steps(2, start) infinite;
+}
+
+.ie-canvas.ProseMirror-focused .ProseMirror-gapcursor {
+  display: block;
+}
+
+@keyframes ie-gapcursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ie-canvas .ProseMirror-gapcursor::after {
+    animation: none;
+  }
 }
 
 /* The editor-only line of a block with nothing to list: never printed. */

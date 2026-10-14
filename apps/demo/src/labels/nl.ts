@@ -61,6 +61,8 @@ export const nl: LabelSet = {
     output: 'Uitvoer',
     preview: 'Uitvoer bekijken',
     previewTitle: 'Voorbeeld van de uitvoer',
+    markdown: 'Markdown bekijken',
+    markdownTitle: 'Uitvoer als Markdown',
     downloadHtml: 'HTML downloaden',
     downloadPdf: 'PDF downloaden',
     printPdf: 'Afdrukken',

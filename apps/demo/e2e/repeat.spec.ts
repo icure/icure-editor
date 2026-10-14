@@ -1,12 +1,39 @@
 import { expect, test } from '@playwright/test'
 
-import { APP, canvas, expression, focusEnd, L, open, toolbar } from './helpers.ts'
+import { APP, canvas, clickInto, expression, focusEnd, L, open, toolbar } from './helpers.ts'
 
 test.describe('repeating blocks', () => {
   test('draws a line per item', async ({ page }) => {
     await open(page, 'welcome-letter')
     const block = canvas(page).locator('.ie-repeat[data-repeat="events.upcoming"]')
     await expect(block.locator('p')).toHaveText([/^– Open house/, /^– Garden workshop/, /^– Winter fair/])
+  })
+
+  test('is one unit: the keyboard never edits its template, and a line can be put back beside it', async ({ page }) => {
+    await open(page, 'welcome-letter')
+    const block = canvas(page).locator('.ie-repeat[data-repeat="events.upcoming"]')
+    const lines = [/^– Open house/, /^– Garden workshop/, /^– Winter fair/]
+    await expect(block.locator('p')).toHaveText(lines)
+    // Removes the blank line between the block and the signature template.
+    await clickInto(page, canvas(page).locator('.ie-repeat + p'))
+    await page.keyboard.press('Backspace')
+    await expect(canvas(page).locator('.ie-repeat + .ie-embed')).toHaveCount(1)
+    // Enter and arrows around the block leave its items alone.
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('Enter')
+    await expect(block.locator('p')).toHaveText(lines)
+    // The cursor goes between the block and the template, where typing makes a new line.
+    await open(page, 'welcome-letter')
+    await expect(block.locator('p')).toHaveText(lines)
+    await clickInto(page, canvas(page).locator('.ie-repeat + p'))
+    await page.keyboard.press('Backspace')
+    await expect(canvas(page).locator('.ie-repeat + .ie-embed')).toHaveCount(1)
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.type('Back again')
+    await expect(canvas(page).locator('.ie-repeat + p')).toHaveText('Back again')
+    await expect(block.locator('p')).toHaveText(lines)
   })
 
   test('keeps a table header once and draws a row per item', async ({ page }) => {

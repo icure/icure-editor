@@ -66,10 +66,13 @@ export function Letter({ template }: { template: unknown }) {
 Output:
 
 ```ts
-import { resolveDocument, toHtmlDocument, toPdfContent, toPdfDefinition, preparePdfmake, renderPdf, withPdfImages } from '@icure/editor'
+import { A4_PAGE, resolveDocument, toHtmlDocument, toMarkdown, toPdfContent, toPdfDefinition, preparePdfmake, renderPdf, withPdfImages } from '@icure/editor'
 
 const resolution = await resolveDocument(doc, provider, { rootId: 'letter' })
-const html = toHtmlDocument(doc, resolution, { title: 'Letter', lang: 'en' })
+// One sheet per page, sized to the page format (the editor's `page`, A4 by default) on screen and on paper.
+const html = toHtmlDocument(doc, resolution, { title: 'Letter', lang: 'en', page: A4_PAGE })
+// CommonMark with GFM tables: headings, paragraphs, bold, italic, tables, images; pages split by `---`.
+const markdown = toMarkdown(doc, resolution)
 
 const pdfmake = preparePdfmake(pdfmakeInstance, { files: robotoVfs, families: { Roboto: { normal: 'Roboto-Regular.ttf', bold: 'Roboto-Medium.ttf', italics: 'Roboto-Italic.ttf', bolditalics: 'Roboto-MediumItalic.ttf' } } })
 const content = toPdfContent(doc, await withPdfImages(resolution), { title: 'Letter', createdAt: new Date(2026, 0, 1) })
@@ -118,11 +121,15 @@ interface ImageProvider {
 ## Accessibility
 
 - The toolbar is a `role="toolbar"` with a label; every icon button has an `aria-label` and
-  `aria-pressed` for marks and alignment; alignment buttons form a labelled `role="group"`.
+  `aria-pressed` for marks and alignment; alignment buttons form a labelled `role="group"`. Its
+  name also shows in a tooltip on hover or keyboard focus, which stays while pointed at and
+  closes with Escape.
 - Menus follow the WAI-ARIA menu-button pattern (arrows, Home/End, Escape returns focus, Tab
   leaves); grouped fields are `role="group"` sections.
 - The canvas is a labelled `role="textbox"` with `aria-multiline`. Mod-B / I / U, Mod-Z / Y,
-  Tab / Shift-Tab between table cells.
+  Tab / Shift-Tab between table cells. A repeating block or an embedded template is one unit: the
+  arrows select it whole, and stop between two such blocks (a gap cursor) where typing or Enter
+  starts a new line.
 - The raw expression of a tapped reference is announced under the toolbar (`aria-live`): the touch
   alternative to the hover tooltip. Images are resized by buttons and a number field, never by
   dragging; their description is asked as soon as they are inserted.

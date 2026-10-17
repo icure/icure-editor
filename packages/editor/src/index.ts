@@ -83,7 +83,7 @@ export { DEFAULT_LABELS, mergeLabels, type EditorLabels, type InlineEditingLabel
 // Output.
 export { createSerializer, htmlDocumentCss, toHtml, toHtmlDocument, toHtmlFragment, type HtmlDocumentOptions, type HtmlOptions, type SerializerOptions } from './output/html.ts'
 export { PAGE_BREAK, toMarkdown, type MarkdownOptions } from './output/markdown.ts'
-export { DEFAULT_MARGIN_MM, mm, PAGE_SIZES, toPdfContent, type PageSize, type PdfAlignment, type PdfBlock, type PdfContent, type PdfContentOptions, type TextRun } from './output/pdfContent.ts'
+export { DEFAULT_MARGIN_MM, mm, PAGE_SIZES, pdfPageOf, toPdfContent, type PageSize, type PdfAlignment, type PdfBlock, type PdfContent, type PdfContentOptions, type PdfPageSize, type TextRun } from './output/pdfContent.ts'
 export { DEFAULT_PDF_FONT, preparePdfmake, renderPdf, toPdfDefinition, type DocDefinition, type PdfDefinitionOptions, type PdfFonts, type PdfmakeInstance } from './output/pdf.ts'
 export { documentFileName, downloadBytes, fileDay, HTML_TYPE, PDF_TYPE, printPdf, safeFileSegment, withPdfImages } from './output/browser.ts'
 

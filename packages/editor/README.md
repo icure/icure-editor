@@ -67,7 +67,7 @@ export function Letter({ template }: { template: unknown }) {
 Output:
 
 ```ts
-import { A4_PAGE, resolveDocument, toHtmlDocument, toMarkdown, toPdfContent, toPdfDefinition, preparePdfmake, renderPdf, withPdfImages } from '@icure/editor'
+import { A4_PAGE, resolveDocument, toHtmlDocument, toMarkdown, pdfPageOf, toPdfContent, toPdfDefinition, preparePdfmake, renderPdf, withPdfImages } from '@icure/editor'
 
 const resolution = await resolveDocument(doc, provider, { rootId: 'letter' })
 // One sheet per page, sized to the page format (the editor's `page`, A4 by default) on screen and on paper.
@@ -77,6 +77,7 @@ const markdown = toMarkdown(doc, resolution)
 
 const pdfmake = preparePdfmake(pdfmakeInstance, { files: robotoVfs, families: { Roboto: { normal: 'Roboto-Regular.ttf', bold: 'Roboto-Medium.ttf', italics: 'Roboto-Italic.ttf', bolditalics: 'Roboto-MediumItalic.ttf' } } })
 const content = toPdfContent(doc, await withPdfImages(resolution), { title: 'Letter', createdAt: new Date(2026, 0, 1) })
+// A custom or landscape sheet: pass the editor's PageFormat, `{ ..., ...pdfPageOf(format) }`
 const bytes = await renderPdf(pdfmake, toPdfDefinition(content))
 ```
 

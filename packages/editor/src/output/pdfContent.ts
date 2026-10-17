@@ -5,6 +5,7 @@
 import type { Mark, Node as ProseNode } from 'prosemirror-model'
 
 import { clampImageWidth, dataUriType } from '../images.ts'
+import type { PageFormat } from '../pagination.ts'
 import { renderDocument } from '../render.ts'
 import type { Resolution } from '../resolve.ts'
 import { cellSides, editorSchema, safeAlignment, safeColour, safeFont, safeSize } from '../schema.ts'
@@ -21,6 +22,11 @@ export const PAGE_SIZES = {
   Letter: { width: 612, height: 792 },
 } as const
 export type PageSize = keyof typeof PAGE_SIZES
+// A sheet in points.
+export interface PdfPageSize {
+  readonly width: number
+  readonly height: number
+}
 
 export interface TextRun {
   readonly text: string
@@ -62,7 +68,8 @@ export interface PdfContent {
   readonly title: string
   // Fixed: two renders of the same content are byte-identical.
   readonly createdAt?: Date
-  readonly page: PageSize
+  // The sheet in points (portrait or landscape).
+  readonly page: PdfPageSize
   readonly marginMm: number
   readonly blocks: readonly PdfBlock[]
 }
@@ -70,13 +77,32 @@ export interface PdfContent {
 export interface PdfContentOptions {
   readonly title: string
   readonly createdAt?: Date
-  readonly page?: PageSize
+  // A named size, or a format in mm (any size, landscape included). With a format the margin
+  // defaults to the format's own; an explicit `marginMm` wins.
+  readonly page?: PageSize | PageFormat
   readonly marginMm?: number
   // A closing line (who issued it, a reference…), small and italic.
   readonly footer?: string
 }
 
 export const DEFAULT_MARGIN_MM = 20
+
+const MIN_SHEET_MM = 50
+const MAX_SHEET_MM = 2000
+const sane = (value: unknown, min: number, max: number): value is number => typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max
+
+// The sheet and margin of a page option. A format that is not finite, positive and within bounds,
+// or whose margin leaves no room for content, falls back to A4 and the default margin.
+function sheetOf(page: PageSize | PageFormat, marginMm: number | undefined): { sheet: PdfPageSize; marginMm: number } {
+  const fallback = { sheet: PAGE_SIZES.A4, marginMm: marginMm ?? DEFAULT_MARGIN_MM }
+  if (typeof page === 'string') return page in PAGE_SIZES ? { sheet: PAGE_SIZES[page], marginMm: marginMm ?? DEFAULT_MARGIN_MM } : fallback
+  if (!page || !sane(page.widthMm, MIN_SHEET_MM, MAX_SHEET_MM) || !sane(page.heightMm, MIN_SHEET_MM, MAX_SHEET_MM)) return fallback
+  const own = sane(page.marginMm, 0, Math.min(page.widthMm, page.heightMm) / 2 - 1e-6) ? page.marginMm : undefined
+  return { sheet: { width: mm(page.widthMm), height: mm(page.heightMm) }, marginMm: marginMm ?? own ?? DEFAULT_MARGIN_MM }
+}
+
+// The options that print a `PageFormat`: `toPdfContent(doc, resolution, { title, ...pdfPageOf(format) })`.
+export const pdfPageOf = (format: PageFormat): Pick<PdfContentOptions, 'page' | 'marginMm'> => ({ page: format, marginMm: format.marginMm })
 // PDF embeds PNG and JPEG; other types must be converted first (see output/images.ts).
 const PDF_IMAGE_TYPES = ['image/png', 'image/jpeg']
 
@@ -201,9 +227,10 @@ function blocksOf(node: ProseNode, ctx: Ctx): PdfBlock[] {
 }
 
 // The document's pages, each starting a new PDF page.
-export function toPdfContent(doc: ProseNode, resolution: Resolution, { title, createdAt, page = 'A4', marginMm = DEFAULT_MARGIN_MM, footer }: PdfContentOptions): PdfContent {
+export function toPdfContent(doc: ProseNode, resolution: Resolution, { title, createdAt, page = 'A4', marginMm: marginOption, footer }: PdfContentOptions): PdfContent {
   const rendered = renderDocument(doc, resolution)
-  const ctx: Ctx = { resolution, maxWidthPt: PAGE_SIZES[page].width - 2 * mm(marginMm) }
+  const { sheet, marginMm } = sheetOf(page, marginOption)
+  const ctx: Ctx = { resolution, maxWidthPt: sheet.width - 2 * mm(marginMm) }
   const pages: PdfBlock[][] = []
   rendered.forEach((sheet) => {
     const content: PdfBlock[] = []
@@ -212,5 +239,5 @@ export function toPdfContent(doc: ProseNode, resolution: Resolution, { title, cr
   })
   const body = pages.flatMap((content, index): PdfBlock[] => (index === 0 ? content : [{ kind: 'pageBreak' }, ...content]))
   const closing: PdfBlock[] = footer ? [{ kind: 'paragraph', runs: [{ text: footer, italic: true }], size: 8 }] : []
-  return { title, page, marginMm, ...(createdAt ? { createdAt } : {}), blocks: [...body, ...closing] }
+  return { title, page: sheet, marginMm, ...(createdAt ? { createdAt } : {}), blocks: [...body, ...closing] }
 }

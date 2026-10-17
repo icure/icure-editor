@@ -2,7 +2,7 @@
 // supplies (pdfmake is an optional peer: the browser build in the page or a worker, the Node build in
 // tests). Nothing is fetched: fonts come from pdfmake's virtual file system, images are inline
 // `data:` URIs, and every URL and local path is refused.
-import { mm, PAGE_SIZES, type PdfBlock, type PdfCell, type PdfContent, type TextRun } from './pdfContent.ts'
+import { mm, type PdfBlock, type PdfCell, type PdfContent, type TextRun } from './pdfContent.ts'
 
 const BODY_SIZE = 10
 const HEADING_SIZES = { 1: 16, 2: 13, 3: 11 } as const
@@ -121,7 +121,7 @@ export function toPdfDefinition(content: PdfContent, { fontFamily = DEFAULT_PDF_
     breakBefore = false
   }
   return {
-    pageSize: PAGE_SIZES[content.page],
+    pageSize: { width: content.page.width, height: content.page.height },
     pageMargins: mm(content.marginMm),
     info: { title: content.title, creator, ...(content.createdAt ? { creationDate: content.createdAt } : {}) },
     defaultStyle: { font: fontFamily, fontSize: BODY_SIZE, lineHeight: 1.15 },

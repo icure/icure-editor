@@ -57,3 +57,14 @@ test('the PDF of the radiology request holds the heading of its frame as a bold 
   expect(runs).toContainEqual(expect.objectContaining({ text: 'Examen demandé', bold: true }))
   expect(runs).toContainEqual(expect.objectContaining({ text: 'Médecin prescripteur', bold: true }))
 })
+
+test('the PDF of the radiology request is a landscape A4 sheet', async ({ page }) => {
+  await page.goto('/?form=radiology-request')
+  await expect(page.getByRole('textbox', { name: canvasName })).toBeVisible()
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: APP.downloadPdf }).click()
+  const pdf = (await readFile(await (await download).path())).toString('latin1')
+  const box = /\/MediaBox\s*\[\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\]/.exec(pdf)!.slice(1).map(Number)
+  expect(box[2]! - box[0]!).toBeCloseTo(841.89, 0)
+  expect(box[3]! - box[1]!).toBeCloseTo(595.28, 0)
+})

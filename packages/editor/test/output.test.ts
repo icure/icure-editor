@@ -81,6 +81,11 @@ describe('PDF output', () => {
     const r = await resolveDocument(document, fakeProvider({}))
     const bad = [{ widthMm: Number.NaN, heightMm: 210, marginMm: 10 }, { widthMm: -1, heightMm: 210, marginMm: 10 }, { widthMm: 1e9, heightMm: 210, marginMm: 10 }, { widthMm: 297, heightMm: 0, marginMm: 10 }, { widthMm: '297', heightMm: 210, marginMm: 10 } as never]
     for (const format of bad) expect(toPdfContent(document, r, { title: 'Hostile', page: format })).toMatchObject({ page: { width: 595.28, height: 841.89 }, marginMm: 20 })
+    // The documented path, pdfPageOf, and an explicit option drop a margin that leaves no room too.
+    for (const marginMm of [150, -5, Number.NaN]) {
+      expect(toPdfContent(document, r, { title: 'Hostile', ...pdfPageOf({ widthMm: 297, heightMm: 210, marginMm }) })).toMatchObject({ marginMm: 20 })
+      expect(toPdfContent(document, r, { title: 'Hostile', page: 'A5', marginMm })).toMatchObject({ marginMm: 20 })
+    }
     // A margin that leaves no room is dropped, the sheet is kept.
     for (const marginMm of [150, -5, Number.NaN]) expect(toPdfContent(document, r, { title: 'Hostile', page: { widthMm: 297, heightMm: 210, marginMm } })).toMatchObject({ page: { width: expect.closeTo(841.89, 1) }, marginMm: 20 })
   })

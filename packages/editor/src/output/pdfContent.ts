@@ -91,14 +91,16 @@ const MIN_SHEET_MM = 50
 const MAX_SHEET_MM = 2000
 const sane = (value: unknown, min: number, max: number): value is number => typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max
 
-// The sheet and margin of a page option. A format that is not finite, positive and within bounds,
-// or whose margin leaves no room for content, falls back to A4 and the default margin.
-function sheetOf(page: PageSize | PageFormat, marginMm: number | undefined): { sheet: PdfPageSize; marginMm: number } {
-  const fallback = { sheet: PAGE_SIZES.A4, marginMm: marginMm ?? DEFAULT_MARGIN_MM }
-  if (typeof page === 'string') return page in PAGE_SIZES ? { sheet: PAGE_SIZES[page], marginMm: marginMm ?? DEFAULT_MARGIN_MM } : fallback
-  if (!page || !sane(page.widthMm, MIN_SHEET_MM, MAX_SHEET_MM) || !sane(page.heightMm, MIN_SHEET_MM, MAX_SHEET_MM)) return fallback
-  const own = sane(page.marginMm, 0, Math.min(page.widthMm, page.heightMm) / 2 - 1e-6) ? page.marginMm : undefined
-  return { sheet: { width: mm(page.widthMm), height: mm(page.heightMm) }, marginMm: marginMm ?? own ?? DEFAULT_MARGIN_MM }
+// The sheet and margin of a page option. A format that is not finite, positive and within bounds
+// falls back to A4. A margin (explicit or the format's) that is not finite, >= 0 and under half of
+// each side is dropped for the next candidate, ending at the default margin.
+function sheetOf(page: PageSize | PageFormat, explicitMarginMm: number | undefined): { sheet: PdfPageSize; marginMm: number } {
+  const format = typeof page === 'object' && page && sane(page.widthMm, MIN_SHEET_MM, MAX_SHEET_MM) && sane(page.heightMm, MIN_SHEET_MM, MAX_SHEET_MM) ? page : null
+  const sheet = format ? { width: mm(format.widthMm), height: mm(format.heightMm) } : typeof page === 'string' && page in PAGE_SIZES ? PAGE_SIZES[page] : PAGE_SIZES.A4
+  const halfSideMm = Math.min(sheet.width, sheet.height) / POINTS_PER_MM / 2
+  const fits = (value: unknown): value is number => sane(value, 0, halfSideMm - 1e-6)
+  const marginMm = [explicitMarginMm, format?.marginMm].find(fits) ?? DEFAULT_MARGIN_MM
+  return { sheet, marginMm }
 }
 
 // The options that print a `PageFormat`: `toPdfContent(doc, resolution, { title, ...pdfPageOf(format) })`.

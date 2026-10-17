@@ -136,6 +136,14 @@ describe('PDF output', () => {
       expect(body[1]!.slice(1).map((c) => (c.stack as { text: { text: string }[] }[])[0]!.text[0]!.text)).toEqual(['D', 'E'])
     })
 
+    it('clamps a rowSpan taller than the table, so the PDF still renders', async () => {
+      const document = doc(page(table(row(styled('table_cell', { rowspan: 5 }, paragraph(text('A'))), cell('table_cell', text('B'))), row(cell('table_cell', text('C'))))))
+      const definition = await definitionOf(document)
+      expect(bodyOf(definition.content[0]).body[0]![0]).toMatchObject({ rowSpan: 2 })
+      const bytes = await renderPdf(pdfmake, definition)
+      expect(Buffer.from(bytes).subarray(0, 5).toString('latin1')).toBe('%PDF-')
+    })
+
     it('ignores a colour that is not a plain colour', async () => {
       const document = doc(page(table(row(styled('table_cell', { background: 'red; position: fixed', borderColor: 'url(x)' }, paragraph(text('X')))))))
       const cellNode = bodyOf((await definitionOf(document)).content[0]).body[0]![0]!

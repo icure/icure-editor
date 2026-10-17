@@ -50,14 +50,16 @@ function runNode(r: TextRun, fonts: Readonly<Record<string, string>>): DocNode {
 
 // The cells placed on pdfmake's grid: each cell at its first free position, `{}` placeholders on the
 // positions it covers (to the right for a colSpan, below for a rowSpan), as pdfmake requires.
-function tableGrid(rows: readonly (readonly PdfCell[])[], make: (cell: PdfCell) => DocNode): DocNode[][] {
+function tableGrid(rows: readonly (readonly PdfCell[])[], make: (cell: PdfCell, rowSpan: number) => DocNode): DocNode[][] {
   const grid: (DocNode | undefined)[][] = rows.map(() => [])
   rows.forEach((row, r) => {
     let c = 0
     for (const cell of row) {
       while (grid[r]![c]) c++
-      for (let dr = 0; dr < cell.rowSpan && r + dr < rows.length; dr++) {
-        for (let dc = 0; dc < cell.colSpan; dc++) grid[r + dr]![c + dc] = dr === 0 && dc === 0 ? make(cell) : {}
+      // A rowSpan past the last row is clamped: pdfmake rejects a span that leaves the table.
+      const rowSpan = Math.min(cell.rowSpan, rows.length - r)
+      for (let dr = 0; dr < rowSpan; dr++) {
+        for (let dc = 0; dc < cell.colSpan; dc++) grid[r + dr]![c + dc] = dr === 0 && dc === 0 ? make(cell, rowSpan) : {}
       }
       c += cell.colSpan
     }
@@ -94,14 +96,14 @@ export function toPdfDefinition(content: PdfContent, { fontFamily = DEFAULT_PDF_
         return { image: imageName(b.dataUri), ...(b.widthPt ? { width: b.widthPt } : {}), ...(b.align && b.align !== 'justify' ? { alignment: b.align } : {}), margin: [0, 0, 0, SPACE_AFTER] }
     }
   }
-  const cellNode = (cell: PdfCell): DocNode => {
+  const cellNode = (cell: PdfCell, rowSpan: number): DocNode => {
     const stack = cell.blocks.filter((x): x is Exclude<PdfBlock, { kind: 'pageBreak' }> => x.kind !== 'pageBreak').map(block)
     const fillColor = cell.fill ?? (cell.header ? HEADER_FILL : undefined)
     return {
       stack: stack.length > 0 ? stack : [{ text: '' }],
       ...(cell.header ? { bold: true } : {}),
       ...(cell.colSpan > 1 ? { colSpan: cell.colSpan } : {}),
-      ...(cell.rowSpan > 1 ? { rowSpan: cell.rowSpan } : {}),
+      ...(rowSpan > 1 ? { rowSpan } : {}),
       ...(fillColor ? { fillColor } : {}),
       ...(cell.borderColor ? { borderColor: [cell.borderColor, cell.borderColor, cell.borderColor, cell.borderColor] } : {}),
       ...(cell.borders ? { border: [...cell.borders] } : {}),

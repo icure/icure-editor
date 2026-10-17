@@ -129,5 +129,6 @@ export const fr: LabelSet = {
     },
     sources: { 'events.upcoming': 'Événements à venir', 'invoice.lines': 'Lignes de facture', 'waitlist.entries': 'Liste d’attente', 'programme.days': 'Jours du programme', 'day.sessions': 'Séances du jour' },
     templateNames: { 'welcome-letter': 'Lettre de bienvenue', invoice: 'Facture', letterhead: 'En-tête', signature: 'Signature', footer: 'Pied de page', problems: 'Références non résolues', 'loop-a': 'Boucle A', 'loop-b': 'Boucle B', programme: 'Programme du week-end portes ouvertes', blank: 'Page vierge', 'page-break-image': 'Saut de page avant une image' },
+    templateGroups: { documents: 'Documents', blocks: 'Blocs partagés', edgeCases: 'Cas limites', admissions: 'Formulaires médicaux : admissions', imaging: 'Formulaires médicaux : imagerie', laboratory: 'Formulaires médicaux : laboratoire', orders: 'Formulaires médicaux : commandes et prescriptions' },
   },
 }

@@ -1,5 +1,7 @@
 import type { PartialLabels } from '@icure/editor'
 
+import type { TemplateGroup } from '../samples/templates.ts'
+
 export const LANGUAGES = ['en', 'fr', 'nl'] as const
 export type Language = (typeof LANGUAGES)[number]
 
@@ -25,6 +27,7 @@ export interface AppStrings {
   readonly fields: Readonly<Record<string, string>>
   readonly sources: Readonly<Record<string, string>>
   readonly templateNames: Readonly<Record<string, string>>
+  readonly templateGroups: Readonly<Record<TemplateGroup, string>>
 }
 
 export interface LabelSet {

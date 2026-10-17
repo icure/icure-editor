@@ -129,5 +129,6 @@ export const nl: LabelSet = {
     },
     sources: { 'events.upcoming': 'Komende evenementen', 'invoice.lines': 'Factuurregels', 'waitlist.entries': 'Wachtlijst', 'programme.days': 'Dagen van het programma', 'day.sessions': 'Sessies van de dag' },
     templateNames: { 'welcome-letter': 'Welkomstbrief', invoice: 'Factuur', letterhead: 'Briefhoofd', signature: 'Handtekening', footer: 'Voettekst', problems: 'Onopgeloste verwijzingen', 'loop-a': 'Lus A', 'loop-b': 'Lus B', programme: 'Programma open weekend', blank: 'Lege pagina', 'page-break-image': 'Pagina-einde voor een afbeelding' },
+    templateGroups: { documents: 'Documenten', blocks: 'Gedeelde blokken', edgeCases: 'Randgevallen', admissions: 'Medische formulieren: opnames', imaging: 'Medische formulieren: beeldvorming', laboratory: 'Medische formulieren: laboratorium', orders: 'Medische formulieren: bestellingen en voorschriften' },
   },
 }

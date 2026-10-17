@@ -2,6 +2,8 @@
 // asynchronous, an image store holding data: URIs.
 import { blobToDataUri, isEditorDocument, type EditorDataProvider, type FieldDescriptor, type RepeatData, type RepeatSourceDescriptor } from '@icure/editor'
 
+import { FIELD_VALUES as FORM_VALUES, FIELDS as FORM_FIELDS } from '@icure/editor-forms/provider'
+
 import type { AppStrings, Language } from './labels/index.ts'
 import { LOGO_IMAGE_ID, SAMPLE_TEMPLATES } from './samples/templates.ts'
 
@@ -124,11 +126,12 @@ export function createFakeProvider(language: Language, strings: AppStrings): Edi
     },
   ]
   return {
-    listFields: () => fields,
-    resolveField: (key) => later(fieldValues[key]),
+    // The medical forms read their own fictitious patient, physician and insurer (in French).
+    listFields: () => [...fields, ...FORM_FIELDS],
+    resolveField: (key) => later(fieldValues[key] ?? FORM_VALUES[key]),
     listRepeatSources: () => sources,
     resolveRepeat: (source) => later(repeatValues[source]),
-    listTemplates: () => SAMPLE_TEMPLATES.filter((t) => t.embeddable).map((t) => ({ id: t.id, name: strings.templateNames[t.id] ?? t.id })),
+    listTemplates: () => SAMPLE_TEMPLATES.filter((t) => t.embeddable).map((t) => ({ id: t.id, name: strings.templateNames[t.id] ?? t.title ?? t.id })),
     loadTemplate: (id) => later(templateStore.has(id) ? { id, name: strings.templateNames[id] ?? id, content: templateStore.get(id) } : null),
     // Only a known template, and only content that fits the editor schema, is stored.
     saveTemplate: async (id, content) => {

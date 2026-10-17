@@ -75,7 +75,8 @@ const CATALOGUE: Readonly<Record<string, Readonly<Record<string, FieldEntry>>>> 
 // The values by key (the e2e tests read them from here, never retyped).
 export const FIELD_VALUES: Readonly<Record<string, string>> = Object.fromEntries(Object.values(CATALOGUE).flatMap((group) => Object.entries(group).map(([key, entry]) => [key, entry.value])))
 
-const FIELDS: readonly FieldDescriptor[] = Object.entries(CATALOGUE).flatMap(([group, entries]) => Object.entries(entries).map(([key, entry]) => ({ key, label: entry.label, group })))
+// The fields "Insert field" offers, by group.
+export const FIELDS: readonly FieldDescriptor[] = Object.entries(CATALOGUE).flatMap(([group, entries]) => Object.entries(entries).map(([key, entry]) => ({ key, label: entry.label, group })))
 
 const later = <T,>(value: T): Promise<T> => new Promise((resolve) => setTimeout(() => resolve(value), LATENCY_MS))
 

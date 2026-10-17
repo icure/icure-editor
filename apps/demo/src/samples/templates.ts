@@ -1,17 +1,30 @@
-// The demo's sample templates (fictitious content). `embeddable` ones are offered by "Insert template".
+// The demo's sample templates (fictitious content), in groups, followed by the medical forms of the
+// forms example (apps/forms). `embeddable` ones are offered by "Insert template".
+import type { PageFormat } from '@icure/editor'
+import { FORMS } from '@icure/editor-forms/forms'
+
 import { bold, doc, embed, field, fieldRow, footerRow, h, headerRow, image, p, pAligned, repeat, SMALL, STRONG, table, text, withMarks, zoned } from './build.ts'
+
+// The groups of the template list, in order.
+export const TEMPLATE_GROUPS = ['documents', 'blocks', 'edgeCases', 'admissions', 'imaging', 'laboratory', 'orders'] as const
+export type TemplateGroup = (typeof TEMPLATE_GROUPS)[number]
 
 export interface SampleTemplate {
   readonly id: string
   readonly content: unknown
   readonly embeddable?: boolean
+  readonly group: TemplateGroup
+  // A form's own title (its content is in French whatever the language); the samples are named by the label sets.
+  readonly title?: string
+  // The sheet, when not A4 portrait.
+  readonly page?: PageFormat
 }
 
 export const LOGO_IMAGE_ID = 'logo'
 // Enough lines to leave page 1 less room than the loaded logo needs.
 const FILLER_LINES = 47
 
-export const SAMPLE_TEMPLATES: readonly SampleTemplate[] = [
+const SAMPLES: readonly Omit<SampleTemplate, 'group'>[] = [
   {
     id: 'welcome-letter',
     content: doc([
@@ -95,6 +108,33 @@ export const SAMPLE_TEMPLATES: readonly SampleTemplate[] = [
       [p(image(LOGO_IMAGE_ID, 'Riverside Community Centre logo', 180)), p(text('The second page starts with the logo.'))],
     ),
   },
+]
+
+const SAMPLE_GROUPS: Readonly<Record<string, TemplateGroup>> = {
+  'welcome-letter': 'documents',
+  invoice: 'documents',
+  programme: 'documents',
+  letterhead: 'blocks',
+  signature: 'blocks',
+  footer: 'blocks',
+}
+
+const FORM_GROUPS: Readonly<Record<string, TemplateGroup>> = {
+  'surgery-announcement': 'admissions',
+  'theatre-admission': 'admissions',
+  'surgical-admission': 'admissions',
+  'urgent-admission': 'admissions',
+  'radiology-request': 'imaging',
+  'imaging-request': 'imaging',
+  'lab-request': 'laboratory',
+  'basophil-activation-test': 'laboratory',
+  'compression-prescription': 'orders',
+  'hip-prosthesis-order': 'orders',
+}
+
+export const SAMPLE_TEMPLATES: readonly SampleTemplate[] = [
+  ...SAMPLES.map((t) => ({ ...t, group: SAMPLE_GROUPS[t.id] ?? 'edgeCases' })),
+  ...FORMS.map((form) => ({ id: form.id, content: form.content, title: form.title, group: FORM_GROUPS[form.id] ?? 'orders', ...(form.page ? { page: form.page } : {}) })),
 ]
 
 export const DEFAULT_TEMPLATE_ID = 'welcome-letter'

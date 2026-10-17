@@ -12,6 +12,7 @@
       "name": "@icure/editor-demo",
       "dependencies": {
         "@icure/editor": "workspace:*",
+        "@icure/editor-forms": "workspace:*",
         "pdfmake": "~0.3.11",
         "react": "^19.3.0",
         "react-dom": "^19.3.0",

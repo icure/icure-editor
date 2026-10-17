@@ -127,6 +127,51 @@ body {
   }
 }
 
+.demo-group + .demo-group {
+  margin-top: 0.25rem;
+}
+
+/* A group's name: a 44 px target that opens or closes the group. */
+.demo-group summary {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border-radius: 6px;
+  color: var(--demo-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The open / closed marker (the flex layout drops the native one). */
+.demo-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.demo-group summary::before {
+  content: '▸';
+  inline-size: 1em;
+  margin-inline-end: 0.25rem;
+}
+
+.demo-group[open] > summary::before {
+  content: '▾';
+}
+
+.demo-group summary {
+  list-style: none;
+}
+
+.demo-group summary:focus-visible {
+  outline: 2px solid var(--demo-accent);
+  outline-offset: 2px;
+}
+
+.demo-group ul {
+  padding-left: 0.5rem;
+}
+
 .demo-nav a {
   display: block;
   padding: 0.6rem 0.75rem;

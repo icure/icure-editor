@@ -23,5 +23,9 @@
     "@vitejs/plugin-react": "^6.1.2",
     "typescript": "^6.0.3",
     "vite": "^8.3.4"
+  },
+  "exports": {
+    "./forms": "./src/forms/index.ts",
+    "./provider": "./src/provider.ts"
   }
 }

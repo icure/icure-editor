@@ -7,7 +7,8 @@ Guidance for working in this repository.
 `@icure/editor` is a product-agnostic React document editor (ProseMirror): paginated pages,
 toolbar, tables, fields, repeating blocks, embedded templates and images, all resolved through a
 host-supplied data provider; HTML and PDF output. It must stay agnostic: no product, domain or
-backend type or name in the library or the demo. Sample data is fictitious.
+backend type or name in the library; the demo's own samples stay generic, and the medical forms come
+from `apps/forms`. Sample data is fictitious.
 
 ## Layout
 
@@ -21,8 +22,11 @@ backend type or name in the library or the demo. Sample data is fictitious.
   - `src/react/`: `DocumentEditor`, `Toolbar`, `Menu`, `UnresolvedChip`, `ImagePanel`, node views.
   - `src/styles/`: `index.css` (entry) and `editor.css` (only `--ie-*` custom properties).
   - `test/`: unit and component tests (vitest + jsdom).
-- `apps/demo`: Vite + React test app; `src/fakeContext.ts` (in-memory provider), `src/samples/`,
-  `src/labels/` (en, fr, nl), `e2e/` (Playwright).
+- `apps/demo`: Vite + React test app; `src/fakeContext.ts` (in-memory provider), `src/samples/`
+  (grouped in the template list; the last groups are the forms of `apps/forms`), `src/labels/`
+  (en, fr, nl), `e2e/` (Playwright).
+- `apps/forms`: ten real-world medical forms rebuilt as templates (fictitious data, French), with
+  their own app on :5180; the demo imports them (`@icure/editor-forms/forms`, `/provider`).
 
 ## Commands
 

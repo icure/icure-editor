@@ -50,5 +50,6 @@ export const en: LabelSet = {
     },
     sources: { 'events.upcoming': 'Upcoming events', 'invoice.lines': 'Invoice lines', 'waitlist.entries': 'Waiting list', 'programme.days': 'Programme days', 'day.sessions': 'Day sessions' },
     templateNames: { 'welcome-letter': 'Welcome letter', invoice: 'Invoice', letterhead: 'Letterhead', signature: 'Signature', footer: 'Footer', problems: 'Unresolved references', 'loop-a': 'Loop A', 'loop-b': 'Loop B', programme: 'Open weekend programme', blank: 'Blank page', 'page-break-image': 'Page break before an image' },
+    templateGroups: { documents: 'Documents', blocks: 'Shared blocks', edgeCases: 'Edge cases', admissions: 'Medical forms: admissions', imaging: 'Medical forms: imaging', laboratory: 'Medical forms: laboratory', orders: 'Medical forms: orders and prescriptions' },
   },
 }

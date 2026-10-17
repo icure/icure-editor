@@ -1,12 +1,12 @@
 // The demo: a template picker, the editor over a fake in-memory provider, the output (HTML preview,
 // raw Markdown, HTML and PDF download, print), a language and a theme switch. All state is in the URL.
-import { documentFileName, DocumentEditor, downloadBytes, HTML_TYPE, PDF_TYPE, printPdf, resolveDocument, toHtmlDocument, toMarkdown, type DocumentEditorHandle } from '@icure/editor'
+import { A4_PAGE, documentFileName, DocumentEditor, downloadBytes, HTML_TYPE, PDF_TYPE, printPdf, resolveDocument, toHtmlDocument, toMarkdown, type DocumentEditorHandle } from '@icure/editor'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { createFakeProvider, DEMO_DAY, storedTemplate } from './fakeContext.ts'
 import { LABEL_SETS, LANGUAGES } from './labels/index.ts'
 import { documentPdf } from './pdf.ts'
-import { SAMPLE_TEMPLATES, sampleTemplate } from './samples/templates.ts'
+import { SAMPLE_TEMPLATES, sampleTemplate, TEMPLATE_GROUPS, type SampleTemplate } from './samples/templates.ts'
 import { THEMES, useDemoState, type Theme } from './url.ts'
 
 function useTheme(theme: Theme, language: string) {
@@ -17,6 +17,8 @@ function useTheme(theme: Theme, language: string) {
     root.lang = language
   }, [theme, language])
 }
+
+const templateName = (strings: { readonly templateNames: Readonly<Record<string, string>> }, t: SampleTemplate): string => strings.templateNames[t.id] ?? t.title ?? t.id
 
 export function App() {
   const [state, update] = useDemoState()
@@ -29,7 +31,8 @@ export function App() {
   // The output, shown as rendered HTML (preview) or as raw Markdown.
   const [output, setOutput] = useState<{ readonly view: 'preview' | 'markdown'; readonly text: string } | null>(null)
   const [busy, setBusy] = useState(false)
-  const name = strings.templateNames[template.id] ?? template.id
+  const name = templateName(strings, template)
+  const page = template.page ?? A4_PAGE
 
   // The output is resolved afresh from the document as it stands.
   const current = async () => {
@@ -39,7 +42,7 @@ export function App() {
   }
   const html = async () => {
     const out = await current()
-    return out ? toHtmlDocument(out.doc, out.resolution, { title: name, lang: state.language }) : null
+    return out ? toHtmlDocument(out.doc, out.resolution, { title: name, lang: state.language, page }) : null
   }
   const showPreview = async () => {
     const out = await html()
@@ -57,7 +60,7 @@ export function App() {
     setBusy(true)
     try {
       const out = await current()
-      if (out) then(await documentPdf(out.doc, out.resolution, name, DEMO_DAY))
+      if (out) then(await documentPdf(out.doc, out.resolution, name, DEMO_DAY, page))
     } finally {
       setBusy(false)
     }
@@ -100,28 +103,37 @@ export function App() {
       <div className="demo-body">
         <nav aria-label={strings.templates} className="demo-nav">
           <h2>{strings.templates}</h2>
-          <ul>
-            {SAMPLE_TEMPLATES.map((t) => (
-              <li key={t.id}>
-                <a
-                  href={`?template=${t.id}&lang=${state.language}&theme=${state.theme}`}
-                  aria-current={t.id === template.id ? 'page' : undefined}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setOutput(null)
-                    update({ template: t.id })
-                  }}
-                >
-                  {strings.templateNames[t.id] ?? t.id}
-                </a>
-              </li>
-            ))}
-          </ul>
+          {/* One collapsible group per kind of template; the current template's group starts open. */}
+          {TEMPLATE_GROUPS.map((group) => {
+            const members = SAMPLE_TEMPLATES.filter((t) => t.group === group)
+            return (
+              <details key={group} className="demo-group" open={group === template.group || undefined}>
+                <summary>{strings.templateGroups[group]}</summary>
+                <ul>
+                  {members.map((t) => (
+                    <li key={t.id}>
+                      <a
+                        href={`?template=${t.id}&lang=${state.language}&theme=${state.theme}`}
+                        aria-current={t.id === template.id ? 'page' : undefined}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setOutput(null)
+                          update({ template: t.id })
+                        }}
+                      >
+                        {templateName(strings, t)}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )
+          })}
         </nav>
         <main className="demo-main">
           <h2 className="demo-template-title">{name}</h2>
           {/* Keyed by template: a new template opens a new document, as last saved. */}
-          <DocumentEditor key={template.id} ref={editor} initial={storedTemplate(template.id) ?? template.content} provider={provider} documentId={template.id} labels={labels.editor} readOnly={state.readOnly} />
+          <DocumentEditor key={template.id} ref={editor} initial={storedTemplate(template.id) ?? template.content} provider={provider} documentId={template.id} page={page} labels={labels.editor} readOnly={state.readOnly} />
           <section aria-label={strings.output} className="demo-output">
             <h2>{strings.output}</h2>
             <div className="demo-actions">

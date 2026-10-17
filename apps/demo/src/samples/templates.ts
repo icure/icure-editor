@@ -8,6 +8,8 @@ export interface SampleTemplate {
 }
 
 export const LOGO_IMAGE_ID = 'logo'
+// Enough lines to leave page 1 less room than the loaded logo needs.
+const FILLER_LINES = 47
 
 export const SAMPLE_TEMPLATES: readonly SampleTemplate[] = [
   {
@@ -84,6 +86,15 @@ export const SAMPLE_TEMPLATES: readonly SampleTemplate[] = [
   { id: 'loop-a', embeddable: true, content: doc([p(text('Loop A embeds Loop B.')), embed('loop-b')]) },
   { id: 'loop-b', embeddable: true, content: doc([p(text('Loop B embeds Loop A.')), embed('loop-a')]) },
   { id: 'blank', content: doc([p()]) },
+  {
+    // A page that ends with empty lines and a small footer, and a next page that starts with the logo:
+    // the logo fits the room left on page 1 only if the sheet's bottom margin is counted as room.
+    id: 'page-break-image',
+    content: doc(
+      [h(1, text('Page break before an image')), ...Array.from({ length: FILLER_LINES }, (_, index) => p(text(`Line ${index + 1} of the first page.`))), p(), p(), p(), p(withMarks(field('organisation.phone'), SMALL))],
+      [p(image(LOGO_IMAGE_ID, 'Riverside Community Centre logo', 180)), p(text('The second page starts with the logo.'))],
+    ),
+  },
 ]
 
 export const DEFAULT_TEMPLATE_ID = 'welcome-letter'

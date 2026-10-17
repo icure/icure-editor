@@ -115,6 +115,6 @@ export const fr: LabelSet = {
       'session.title': 'Séance',
     },
     sources: { 'events.upcoming': 'Événements à venir', 'invoice.lines': 'Lignes de facture', 'waitlist.entries': 'Liste d’attente', 'programme.days': 'Jours du programme', 'day.sessions': 'Séances du jour' },
-    templateNames: { 'welcome-letter': 'Lettre de bienvenue', invoice: 'Facture', letterhead: 'En-tête', signature: 'Signature', footer: 'Pied de page', problems: 'Références non résolues', 'loop-a': 'Boucle A', 'loop-b': 'Boucle B', programme: 'Programme du week-end portes ouvertes', blank: 'Page vierge' },
+    templateNames: { 'welcome-letter': 'Lettre de bienvenue', invoice: 'Facture', letterhead: 'En-tête', signature: 'Signature', footer: 'Pied de page', problems: 'Références non résolues', 'loop-a': 'Boucle A', 'loop-b': 'Boucle B', programme: 'Programme du week-end portes ouvertes', blank: 'Page vierge', 'page-break-image': 'Saut de page avant une image' },
   },
 }

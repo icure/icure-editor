@@ -3,7 +3,7 @@
 import { setBlockType, toggleMark } from 'prosemirror-commands'
 import type { MarkType, Node as ProseNode } from 'prosemirror-model'
 import { NodeSelection, type Command, type EditorState } from 'prosemirror-state'
-import { setCellAttr } from 'prosemirror-tables'
+import { CellSelection, selectionCell } from 'prosemirror-tables'
 
 import type { RepeatSourceDescriptor } from './context.ts'
 import { fieldKey, imageKey, repeatKey, templateKey } from './document.ts'
@@ -74,7 +74,28 @@ export const insertTable: Command = (state, dispatch) => {
 }
 
 // The sides the selected cells draw (see `safeBorders`): 'tblr' all, '' none, 't' the top only.
-export const setCellBorders = (sides: string): Command => setCellAttr('borders', safeBorders(sides))
+// Every selected cell is visited (upstream's setCellAttr gives up when the selection cell already
+// holds the value, leaving the others untouched).
+export const setCellBorders =
+  (sides: string): Command =>
+  (state, dispatch) => {
+    const value = safeBorders(sides)
+    const positions: number[] = []
+    if (state.selection instanceof CellSelection) state.selection.forEachCell((_, pos) => positions.push(pos))
+    else {
+      const $cell = selectionCell(state)
+      if (!$cell) return false
+      positions.push($cell.pos)
+    }
+    const changed = positions.filter((pos) => state.doc.nodeAt(pos)?.attrs.borders !== value)
+    if (changed.length === 0) return false
+    if (dispatch) {
+      const tr = state.tr
+      for (const pos of changed) tr.setNodeMarkup(pos, undefined, { ...tr.doc.nodeAt(pos)!.attrs, borders: value })
+      dispatch(tr)
+    }
+    return true
+  }
 
 // The preset of the table around the selection: `grid` (ruled cells) or `layout` (no rules unless a
 // cell names its sides; the editor outlines it, the output never does).

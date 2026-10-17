@@ -39,10 +39,24 @@ export type PdfAlignment = (typeof PDF_ALIGNMENTS)[number]
 export type PdfBlock =
   | { readonly kind: 'heading'; readonly level: 1 | 2 | 3; readonly runs: readonly TextRun[]; readonly align?: PdfAlignment }
   | { readonly kind: 'paragraph'; readonly runs: readonly TextRun[]; readonly size?: number; readonly align?: PdfAlignment }
-  | { readonly kind: 'table'; readonly header: readonly string[]; readonly rows: readonly (readonly string[])[] }
+  // Rows of cells; a cell holds the blocks a page holds (paragraphs, headings, images, nested tables).
+  // The first `headerRows` rows are repeated on each PDF page.
+  | { readonly kind: 'table'; readonly headerRows: number; readonly rows: readonly (readonly PdfCell[])[] }
   // A raster `data:` URI (PNG or JPEG: what PDF embeds), its width in points, its description.
   | { readonly kind: 'image'; readonly dataUri: string; readonly widthPt?: number; readonly alt: string; readonly align?: PdfAlignment }
   | { readonly kind: 'pageBreak' }
+
+export interface PdfCell {
+  readonly blocks: readonly PdfBlock[]
+  readonly colSpan: number
+  readonly rowSpan: number
+  // A header cell (`table_header`): drawn bold on a light fill, unless `fill` is set.
+  readonly header?: boolean
+  readonly fill?: string
+  readonly borderColor?: string
+  // Which sides are drawn, as [left, top, right, bottom]; unset: all four.
+  readonly borders?: readonly [boolean, boolean, boolean, boolean]
+}
 
 export interface PdfContent {
   readonly title: string
@@ -122,24 +136,45 @@ function textblock(node: ProseNode, ctx: Ctx, make: (runs: TextRun[]) => PdfBloc
   return out
 }
 
-const cellText = (cell: ProseNode): string => {
-  const parts: string[] = []
-  cell.forEach((block) => parts.push(block.textContent))
-  return parts.join('\n')
+const MAX_SPAN = 1000
+const spanOf = (value: unknown): number => {
+  const n = Number(value)
+  return Number.isInteger(n) && n >= 1 ? Math.min(n, MAX_SPAN) : 1
 }
+// pdfmake's default cell padding, both sides.
+const CELL_PADDING_PT = 8
+const MIN_CELL_WIDTH_PT = 24
 
-function tableOf(table: ProseNode): PdfBlock | null {
-  const rows: string[][] = []
+function tableOf(table: ProseNode, ctx: Ctx): PdfBlock | null {
+  if (table.childCount === 0) return null
+  let columns = 1
   table.forEach((row) => {
-    const cells: string[] = []
-    row.forEach((cell) => cells.push(cellText(cell)))
+    let width = 0
+    row.forEach((cell) => (width += spanOf(cell.attrs.colspan)))
+    columns = Math.max(columns, width)
+  })
+  const rows: PdfCell[][] = []
+  let headerRows = 0
+  let leading = true
+  table.forEach((row) => {
+    const cells: PdfCell[] = []
+    let allHeaders = row.childCount > 0
+    row.forEach((cell) => {
+      const colSpan = spanOf(cell.attrs.colspan)
+      const header = cell.type === nodes.table_header
+      if (!header) allHeaders = false
+      const inner: Ctx = { ...ctx, maxWidthPt: Math.max(MIN_CELL_WIDTH_PT, (ctx.maxWidthPt * colSpan) / columns - CELL_PADDING_PT) }
+      const blocks: PdfBlock[] = []
+      cell.forEach((child) => blocks.push(...blocksOf(child, inner)))
+      const fill = safeColour(cell.attrs.background)
+      const borderColor = safeColour(cell.attrs.borderColor)
+      cells.push({ blocks, colSpan, rowSpan: spanOf(cell.attrs.rowspan), ...(header ? { header: true } : {}), ...(fill ? { fill } : {}), ...(borderColor ? { borderColor } : {}) })
+    })
+    if (leading && allHeaders) headerRows++
+    else leading = false
     rows.push(cells)
   })
-  const first = table.firstChild
-  const hasHeader = first !== null && first.childCount > 0 && Array.from({ length: first.childCount }, (_, i) => first.child(i)).every((c) => c.type === nodes.table_header)
-  const [header, ...body] = rows
-  if (!header) return null
-  return hasHeader ? { kind: 'table', header, rows: body } : { kind: 'table', header: [], rows }
+  return { kind: 'table', headerRows, rows }
 }
 
 const HEADING_LEVELS = [1, 2, 3] as const
@@ -155,7 +190,7 @@ function blocksOf(node: ProseNode, ctx: Ctx): PdfBlock[] {
     return textblock(node, ctx, (runs) => ({ kind: 'heading', level: headingLevel(node.attrs.level), runs, ...(align ? { align } : {}) }))
   }
   if (node.type === nodes.table) {
-    const table = tableOf(node)
+    const table = tableOf(node, ctx)
     return table ? [table] : []
   }
   // Anything else holding blocks (never left after rendering, but harmless): its blocks.

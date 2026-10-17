@@ -2,7 +2,7 @@
 // supplies (pdfmake is an optional peer: the browser build in the page or a worker, the Node build in
 // tests). Nothing is fetched: fonts come from pdfmake's virtual file system, images are inline
 // `data:` URIs, and every URL and local path is refused.
-import { mm, PAGE_SIZES, type PdfBlock, type PdfContent, type TextRun } from './pdfContent.ts'
+import { mm, PAGE_SIZES, type PdfBlock, type PdfCell, type PdfContent, type TextRun } from './pdfContent.ts'
 
 const BODY_SIZE = 10
 const HEADING_SIZES = { 1: 16, 2: 13, 3: 11 } as const
@@ -31,10 +31,14 @@ export interface PdfDefinitionOptions {
 
 export const DEFAULT_PDF_FONT = 'Roboto'
 
+// pdfmake breaks lines only at spaces and other break opportunities, so a long blank ("______") would
+// overflow its cell or the page. A zero-width space after each group of underscores lets it wrap.
+const breakableBlanks = (text: string): string => text.replace(/_{4}(?=_)/g, '$&\u200b')
+
 function runNode(r: TextRun, fonts: Readonly<Record<string, string>>): DocNode {
   const font = r.font ? fonts[r.font] : undefined
   return {
-    text: r.text,
+    text: breakableBlanks(r.text),
     ...(r.bold ? { bold: true } : {}),
     ...(r.italic ? { italics: true } : {}),
     ...(r.underline ? { decoration: 'underline' } : {}),
@@ -42,6 +46,24 @@ function runNode(r: TextRun, fonts: Readonly<Record<string, string>>): DocNode {
     ...(r.color ? { color: r.color } : {}),
     ...(font ? { font } : {}),
   }
+}
+
+// The cells placed on pdfmake's grid: each cell at its first free position, `{}` placeholders on the
+// positions it covers (to the right for a colSpan, below for a rowSpan), as pdfmake requires.
+function tableGrid(rows: readonly (readonly PdfCell[])[], make: (cell: PdfCell) => DocNode): DocNode[][] {
+  const grid: (DocNode | undefined)[][] = rows.map(() => [])
+  rows.forEach((row, r) => {
+    let c = 0
+    for (const cell of row) {
+      while (grid[r]![c]) c++
+      for (let dr = 0; dr < cell.rowSpan && r + dr < rows.length; dr++) {
+        for (let dc = 0; dc < cell.colSpan; dc++) grid[r + dr]![c + dc] = dr === 0 && dc === 0 ? make(cell) : {}
+      }
+      c += cell.colSpan
+    }
+  })
+  // A hole (a row shorter than the widest) is an empty cell.
+  return grid.map((row) => Array.from(row, (node) => node ?? { text: '' }))
 }
 
 export function toPdfDefinition(content: PdfContent, { fontFamily = DEFAULT_PDF_FONT, fonts = {}, creator = '@icure/editor' }: PdfDefinitionOptions = {}): DocDefinition {
@@ -60,17 +82,29 @@ export function toPdfDefinition(content: PdfContent, { fontFamily = DEFAULT_PDF_
       case 'paragraph':
         return { text: b.runs.map((r) => runNode(r, fonts)), ...(b.size ? { fontSize: b.size } : {}), ...(b.align ? { alignment: b.align } : {}), margin: [0, 0, 0, SPACE_AFTER] }
       case 'table': {
-        const columns = Math.max(b.header.length, ...b.rows.map((row) => row.length), 1)
-        const pad = (row: readonly string[]) => [...row, ...Array<string>(columns - row.length).fill('')]
-        const body = [...(b.header.length > 0 ? [pad(b.header).map((h) => ({ text: h, bold: true, fillColor: HEADER_FILL }))] : []), ...b.rows.map((row) => pad(row).map((cell) => ({ text: cell })))]
+        const grid = tableGrid(b.rows, cellNode)
+        const columns = Math.max(1, ...grid.map((row) => row.length))
         return {
-          table: { headerRows: b.header.length > 0 ? 1 : 0, dontBreakRows: true, widths: Array(columns).fill('*'), body },
+          table: { headerRows: Math.min(b.headerRows, grid.length), dontBreakRows: true, widths: Array(columns).fill('*'), body: grid.map((row) => [...row, ...Array.from({ length: columns - row.length }, () => ({}))]) },
           layout: { hLineColor: () => BORDER, vLineColor: () => BORDER, hLineWidth: () => 0.5, vLineWidth: () => 0.5 },
           margin: [0, 0, 0, SPACE_AFTER],
         }
       }
       case 'image':
         return { image: imageName(b.dataUri), ...(b.widthPt ? { width: b.widthPt } : {}), ...(b.align && b.align !== 'justify' ? { alignment: b.align } : {}), margin: [0, 0, 0, SPACE_AFTER] }
+    }
+  }
+  const cellNode = (cell: PdfCell): DocNode => {
+    const stack = cell.blocks.filter((x): x is Exclude<PdfBlock, { kind: 'pageBreak' }> => x.kind !== 'pageBreak').map(block)
+    const fillColor = cell.fill ?? (cell.header ? HEADER_FILL : undefined)
+    return {
+      stack: stack.length > 0 ? stack : [{ text: '' }],
+      ...(cell.header ? { bold: true } : {}),
+      ...(cell.colSpan > 1 ? { colSpan: cell.colSpan } : {}),
+      ...(cell.rowSpan > 1 ? { rowSpan: cell.rowSpan } : {}),
+      ...(fillColor ? { fillColor } : {}),
+      ...(cell.borderColor ? { borderColor: [cell.borderColor, cell.borderColor, cell.borderColor, cell.borderColor] } : {}),
+      ...(cell.borders ? { border: [...cell.borders] } : {}),
     }
   }
   // A page break is carried by the block after it (pdfmake's `pageBreak: 'before'`).

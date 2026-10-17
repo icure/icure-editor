@@ -6,10 +6,10 @@ import { beforeAll, describe, expect, it } from 'vitest'
 
 import { htmlDocumentCss, toHtml, toHtmlDocument } from '../src/output/html.ts'
 import { preparePdfmake, renderPdf, toPdfDefinition, type PdfmakeInstance } from '../src/output/pdf.ts'
-import { toPdfContent } from '../src/output/pdfContent.ts'
+import { toPdfContent, type PdfBlock } from '../src/output/pdfContent.ts'
 import { documentFileName } from '../src/output/browser.ts'
 import { resolveDocument, type Resolution } from '../src/resolve.ts'
-import { aligned, doc, fakeProvider, field, image, page, paragraph, PNG_DATA_URI, repeat, text } from './helpers.ts'
+import { aligned, cell, doc, fakeProvider, field, image, page, paragraph, PNG_DATA_URI, repeat, row, table, text } from './helpers.ts'
 
 const require = createRequire(import.meta.url)
 let pdfmake: PdfmakeInstance
@@ -72,6 +72,91 @@ describe('PDF output', () => {
     expect(content.blocks[3]).toMatchObject({ kind: 'image', widthPt: expect.closeTo(595.28 - 2 * 56.69, 1) })
     const definition = toPdfDefinition(content)
     expect(definition.images).toEqual({ image0: PNG_DATA_URI })
+  })
+
+  describe('tables', () => {
+    const RED_BOLD = [{ type: 'strong' }, { type: 'color', attrs: { color: '#aa0000' } }]
+    const styled = (type: 'table_cell' | 'table_header', attrs: object, ...content: object[]) => ({ type, attrs, content })
+    // A 2x2 table: a header row spanning both columns, then a red bold cell on a background beside a
+    // nested frame (a one-cell table) holding a heading and an image.
+    const frame = table(row(styled('table_cell', {}, { type: 'heading', attrs: { level: 2 }, content: [text('Frame title', [{ type: 'strong' }])] }, paragraph(image('logo', 'Logo', 40)))))
+    const TABLE = doc(
+      page(
+        table(
+          row(styled('table_header', { colspan: 2 }, paragraph(text('Header')))),
+          row(styled('table_cell', { background: '#ffee00', borderColor: '#112233' }, aligned('right', text('Due', RED_BOLD))), styled('table_cell', {}, frame)),
+        ),
+      ),
+    )
+    const definitionOf = async (document = TABLE) => {
+      const r = await resolveDocument(document, fakeProvider({ images: { logo: PNG_DATA_URI } }))
+      return toPdfDefinition(toPdfContent(document, r, { title: 'Table', createdAt: AT }))
+    }
+    type Cell = Record<string, unknown>
+    const bodyOf = (node: unknown) => (node as { table: { headerRows: number; body: Cell[][] } }).table
+
+    it('gives each cell its stack, span, fill and border colour, with {} where a cell is covered', async () => {
+      const { content } = await definitionOf()
+      const { body, headerRows } = bodyOf(content[0])
+      expect(headerRows).toBe(1)
+      expect(body).toHaveLength(2)
+      expect(body[0]![0]).toMatchObject({ colSpan: 2, bold: true, fillColor: '#eeeeee' })
+      expect(body[0]![1]).toEqual({})
+      expect(body[1]![0]).toMatchObject({
+        fillColor: '#ffee00',
+        borderColor: ['#112233', '#112233', '#112233', '#112233'],
+        stack: [{ text: [{ text: 'Due', bold: true, color: '#aa0000' }], alignment: 'right' }],
+      })
+      expect(body[1]![0]).not.toHaveProperty('colSpan')
+    })
+
+    it('draws a nested table and an image inside a cell', async () => {
+      const { content, images } = await definitionOf()
+      const outer = bodyOf(content[0]).body[1]![1] as { stack: Cell[] }
+      const nested = bodyOf(outer.stack[0]).body[0]![0] as { stack: Cell[] }
+      expect(nested.stack[0]).toMatchObject({ text: [{ text: 'Frame title', bold: true }], bold: true, fontSize: 13 })
+      expect(nested.stack[1]).toMatchObject({ image: 'image0', width: 30 })
+      expect(images).toEqual({ image0: PNG_DATA_URI })
+    })
+
+    it('places placeholders for a rowSpan below the cell, shifting the next cells', async () => {
+      const document = doc(
+        page(
+          table(
+            row(styled('table_cell', { rowspan: 2 }, paragraph(text('A'))), cell('table_cell', text('B')), cell('table_cell', text('C'))),
+            row(cell('table_cell', text('D')), cell('table_cell', text('E'))),
+          ),
+        ),
+      )
+      const { body, headerRows } = bodyOf((await definitionOf(document)).content[0])
+      expect(headerRows).toBe(0)
+      expect(body[0]!.map((c) => (c.stack as { text: { text: string }[] }[] | undefined)?.[0]?.text[0]?.text ?? null)).toEqual(['A', 'B', 'C'])
+      expect(body[0]![0]).toMatchObject({ rowSpan: 2 })
+      expect(body[1]![0]).toEqual({})
+      expect(body[1]!.slice(1).map((c) => (c.stack as { text: { text: string }[] }[])[0]!.text[0]!.text)).toEqual(['D', 'E'])
+    })
+
+    it('ignores a colour that is not a plain colour', async () => {
+      const document = doc(page(table(row(styled('table_cell', { background: 'red; position: fixed', borderColor: 'url(x)' }, paragraph(text('X')))))))
+      const cellNode = bodyOf((await definitionOf(document)).content[0]).body[0]![0]!
+      expect(cellNode).not.toHaveProperty('fillColor')
+      expect(cellNode).not.toHaveProperty('borderColor')
+    })
+
+    it('lets a long run of underscores wrap, and keeps the text readable', async () => {
+      const document = doc(page(paragraph(text('Name ' + '_'.repeat(40)))))
+      const content = toPdfContent(document, await resolveDocument(document, fakeProvider({})), { title: 'Blank' })
+      const run = (content.blocks[0] as Extract<PdfBlock, { kind: 'paragraph' }>).runs[0]!
+      expect(run.text).toBe('Name ' + '_'.repeat(40))
+      const text0 = ((toPdfDefinition(content).content[0] as { text: { text: string }[] }).text[0]!).text
+      expect(text0.replaceAll('\u200b', '')).toBe(run.text)
+      expect(text0).not.toMatch(/_{5}/)
+    })
+
+    it('renders the table to a PDF', async () => {
+      const bytes = await renderPdf(pdfmake, await definitionOf())
+      expect(Buffer.from(bytes).subarray(0, 5).toString('latin1')).toBe('%PDF-')
+    })
   })
 
   it('renders the same document to byte-identical PDFs, one PDF page per page', async () => {

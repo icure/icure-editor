@@ -2,12 +2,12 @@
 // unresolved, previewed as HTML and downloaded as a PDF.
 import { readFile } from 'node:fs/promises'
 
-import { DEFAULT_LABELS, editorSchema } from '@icure/editor'
+import { DEFAULT_LABELS, editorSchema, resolveDocument, toEditorDocument, toPdfContent, toPdfDefinition } from '@icure/editor'
 import { expect, test } from '@playwright/test'
 
 import { FORMS } from '../src/forms/index.ts'
 import { APP, EDITOR_LABELS } from '../src/labels.ts'
-import { FIELD_VALUES } from '../src/provider.ts'
+import { createFormsProvider, FIELD_VALUES } from '../src/provider.ts'
 
 const canvasName = EDITOR_LABELS.canvas ?? DEFAULT_LABELS.canvas
 // The fields a form uses, from its content.
@@ -40,3 +40,20 @@ for (const form of FORMS) {
     })
   })
 }
+
+// The runs of a pdfmake definition, through its stacks and table cells.
+const runsOf = (node: unknown): { text?: unknown; bold?: boolean }[] => {
+  if (Array.isArray(node)) return node.flatMap(runsOf)
+  if (!node || typeof node !== 'object') return []
+  const n = node as { text?: unknown; stack?: unknown; table?: { body: unknown } }
+  return [...(typeof n.text === 'string' ? [n as { text: string; bold?: boolean }] : []), ...runsOf(n.text), ...runsOf(n.stack), ...runsOf(n.table?.body)]
+}
+
+test('the PDF of the radiology request holds the heading of its frame as a bold run', async () => {
+  const form = FORMS.find((f) => f.id === 'radiology-request')!
+  const doc = toEditorDocument(form.content)
+  const content = toPdfContent(doc, await resolveDocument(doc, createFormsProvider(), { rootId: form.id }), { title: form.title })
+  const runs = runsOf(toPdfDefinition(content).content)
+  expect(runs).toContainEqual(expect.objectContaining({ text: 'Examen demandé', bold: true }))
+  expect(runs).toContainEqual(expect.objectContaining({ text: 'Médecin prescripteur', bold: true }))
+})

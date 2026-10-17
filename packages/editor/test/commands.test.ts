@@ -1,4 +1,5 @@
 import { EditorState, NodeSelection, TextSelection } from 'prosemirror-state'
+import { CellSelection } from 'prosemirror-tables'
 import { describe, expect, it } from 'vitest'
 
 import { insertField, repeatContent, insertImage, insertRepeat, insertTemplate, selectedImage, selectedKey, setAlignment, setCellBorders, setTableLayout, updateSelectedImage } from '../src/commands.ts'
@@ -26,6 +27,17 @@ describe('table commands', () => {
     expect(row.child(0).attrs.borders).toBe('b')
     expect(row.child(1).attrs.borders).toBe('tblr')
     expect(apply(tableState(), setCellBorders('x;y')).doc.child(0).child(0).child(0).child(0).attrs.borders).toBe('tblr')
+  })
+
+  it('reaches every selected cell even when the selection cell already holds the value', () => {
+    let state = apply(tableState(), setCellBorders('b'))
+    const first = 3
+    const second = first + state.doc.nodeAt(first)!.nodeSize
+    // The anchor (the selection cell) is the first cell, which already has 'b'.
+    state = state.apply(state.tr.setSelection(new CellSelection(state.doc.resolve(first), state.doc.resolve(second))))
+    const next = apply(state, setCellBorders('b'))
+    const row = next.doc.child(0).child(0).child(0)
+    expect([row.child(0).attrs.borders, row.child(1).attrs.borders]).toEqual(['b', 'b'])
   })
 
   it('sets the preset of the table around the cursor, and does nothing outside a table', () => {

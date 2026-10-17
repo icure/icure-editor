@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 
 import { htmlDocumentCss, toHtml, toHtmlDocument } from '../src/output/html.ts'
 import { preparePdfmake, renderPdf, toPdfDefinition, type PdfmakeInstance } from '../src/output/pdf.ts'
-import { toPdfContent, type PdfBlock } from '../src/output/pdfContent.ts'
+import { pdfPageOf, toPdfContent, type PdfBlock } from '../src/output/pdfContent.ts'
 import { documentFileName } from '../src/output/browser.ts'
 import { resolveDocument, type Resolution } from '../src/resolve.ts'
 import { aligned, cell, doc, fakeProvider, field, image, page, paragraph, PNG_DATA_URI, repeat, row, table, text } from './helpers.ts'
@@ -39,7 +39,7 @@ beforeAll(async () => {
 describe('PDF output', () => {
   it('renders every page, its alignments, marks and filled fields', () => {
     const content = toPdfContent(LETTER, resolution, { title: 'Confirmation', createdAt: AT })
-    expect(content.page).toBe('A4')
+    expect(content.page).toEqual({ width: 595.28, height: 841.89 })
     expect(content.blocks.map((b) => b.kind)).toEqual(['heading', 'paragraph', 'paragraph', 'pageBreak', 'paragraph'])
     const [heading, body, unresolved] = content.blocks
     expect(heading).toMatchObject({ kind: 'heading', level: 1, align: 'center' })
@@ -61,6 +61,28 @@ describe('PDF output', () => {
     const r = await resolveDocument(document, fakeProvider({ repeats: { list: { items: [{ name: 'Pollen' }, { name: 'Dust' }], itemFields: ['name'] } } }))
     const content = toPdfContent(document, r, { title: 'List', createdAt: AT })
     expect(content.blocks.map((b) => (b.kind === 'paragraph' ? b.runs.map((x) => x.text).join('') : b.kind))).toEqual(['– Pollen', '– Dust'])
+  })
+
+  it('prints a landscape format: sheet, margins and content width follow it', async () => {
+    const document = doc(page(paragraph(image('wide', '', 3000))))
+    const r = await resolveDocument(document, fakeProvider({ images: { wide: PNG_DATA_URI } }))
+    const content = toPdfContent(document, r, { title: 'Landscape', createdAt: AT, ...pdfPageOf({ widthMm: 297, heightMm: 210, marginMm: 10 }) })
+    const definition = toPdfDefinition(content)
+    expect(definition.pageSize).toEqual({ width: expect.closeTo(841.89, 1), height: expect.closeTo(595.28, 1) })
+    expect(definition.pageMargins).toBeCloseTo(28.35, 1)
+    expect(content.blocks[0]).toMatchObject({ kind: 'image', widthPt: expect.closeTo(841.89 - 2 * 28.35, 1) })
+    // The format's margin is the default; an explicit one wins.
+    expect(toPdfContent(document, r, { title: 'L', page: { widthMm: 297, heightMm: 210, marginMm: 10 } }).marginMm).toBe(10)
+    expect(toPdfContent(document, r, { title: 'L', page: { widthMm: 297, heightMm: 210, marginMm: 10 }, marginMm: 15 }).marginMm).toBe(15)
+  })
+
+  it('falls back to A4 for a hostile page format', async () => {
+    const document = doc(page(paragraph(text('x'))))
+    const r = await resolveDocument(document, fakeProvider({}))
+    const bad = [{ widthMm: Number.NaN, heightMm: 210, marginMm: 10 }, { widthMm: -1, heightMm: 210, marginMm: 10 }, { widthMm: 1e9, heightMm: 210, marginMm: 10 }, { widthMm: 297, heightMm: 0, marginMm: 10 }, { widthMm: '297', heightMm: 210, marginMm: 10 } as never]
+    for (const format of bad) expect(toPdfContent(document, r, { title: 'Hostile', page: format })).toMatchObject({ page: { width: 595.28, height: 841.89 }, marginMm: 20 })
+    // A margin that leaves no room is dropped, the sheet is kept.
+    for (const marginMm of [150, -5, Number.NaN]) expect(toPdfContent(document, r, { title: 'Hostile', page: { widthMm: 297, heightMm: 210, marginMm } })).toMatchObject({ page: { width: expect.closeTo(841.89, 1) }, marginMm: 20 })
   })
 
   it('places an image as its own block, sized in points and capped by the page width', async () => {

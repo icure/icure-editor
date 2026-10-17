@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { canvas, clickInto, focusEnd, L, open, toolbar } from './helpers.ts'
+import { APP, canvas, clickInto, focusEnd, L, open, toolbar } from './helpers.ts'
 
 test.describe('typing and formatting', () => {
   test('types text and formats it from the toolbar and the keyboard', async ({ page }) => {
@@ -55,7 +55,12 @@ test.describe('typing and formatting', () => {
     await clickInto(page, first)
     const choose = async (name: string) => {
       await toolbar(page).getByRole('button', { name: L.tableMenu, exact: true }).click()
-      await page.getByRole('menuitem', { name, exact: true }).click()
+      // The presets and the borders are choices (menuitemradio), the current one checked.
+      const choice = page.getByRole('menuitemradio', { name, exact: true })
+      await choice.click()
+      await toolbar(page).getByRole('button', { name: L.tableMenu, exact: true }).click()
+      await expect(choice).toHaveAttribute('aria-checked', 'true')
+      await page.keyboard.press('Escape')
     }
     await choose(L.table.bordersBottom)
     await expect(first).toHaveAttribute('data-borders', 'b')
@@ -73,6 +78,31 @@ test.describe('typing and formatting', () => {
     await choose(L.table.layoutGrid)
     await expect(canvas(page).locator('table')).not.toHaveAttribute('data-layout')
     await expect(first).toHaveCSS('border-top-style', 'solid')
+  })
+
+  test('keeps the rules of a grid table nested in a layout table, in the editor, in print and in the HTML', async ({ page }) => {
+    await open(page, 'blank')
+    await focusEnd(page)
+    await toolbar(page).getByRole('button', { name: L.insertTable }).click()
+    await clickInto(page, canvas(page).locator('table td').first())
+    await toolbar(page).getByRole('button', { name: L.tableMenu, exact: true }).click()
+    await page.getByRole('menuitemradio', { name: L.table.layoutPlain, exact: true }).click()
+    await clickInto(page, canvas(page).locator('table td').first())
+    await toolbar(page).getByRole('button', { name: L.insertTable }).click()
+    const outer = canvas(page).locator("table[data-layout='layout']")
+    const outerCell = outer.locator(':scope > tbody > tr > td').nth(1)
+    const innerCell = outer.locator('table:not([data-layout]) td').first()
+    await expect(innerCell).toBeVisible()
+    await expect(outerCell).toHaveCSS('border-top-style', 'dashed')
+    await expect(innerCell).toHaveCSS('border-top-style', 'solid')
+    await page.emulateMedia({ media: 'print' })
+    await expect(outerCell).toHaveCSS('border-top-style', 'none')
+    await expect(innerCell).toHaveCSS('border-top-style', 'solid')
+    await page.emulateMedia({ media: 'screen' })
+    await page.getByRole('button', { name: APP.preview }).click()
+    const sheet = page.frameLocator(`iframe[title="${APP.previewTitle}"]`)
+    await expect(sheet.locator("table[data-layout='layout'] > tbody > tr > td").nth(1)).toHaveCSS('border-top-style', 'none')
+    await expect(sheet.locator('table:not([data-layout]) td').first()).toHaveCSS('border-top-style', 'solid')
   })
 
   test('moves an overflowing block to a new page', async ({ page }) => {

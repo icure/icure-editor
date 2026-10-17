@@ -96,7 +96,7 @@ const sane = (value: unknown, min: number, max: number): value is number => type
 // each side is dropped for the next candidate, ending at the default margin.
 function sheetOf(page: PageSize | PageFormat, explicitMarginMm: number | undefined): { sheet: PdfPageSize; marginMm: number } {
   const format = typeof page === 'object' && page && sane(page.widthMm, MIN_SHEET_MM, MAX_SHEET_MM) && sane(page.heightMm, MIN_SHEET_MM, MAX_SHEET_MM) ? page : null
-  const sheet = format ? { width: mm(format.widthMm), height: mm(format.heightMm) } : typeof page === 'string' && page in PAGE_SIZES ? PAGE_SIZES[page] : PAGE_SIZES.A4
+  const sheet = format ? { width: mm(format.widthMm), height: mm(format.heightMm) } : typeof page === 'string' && Object.hasOwn(PAGE_SIZES, page) ? PAGE_SIZES[page] : PAGE_SIZES.A4
   const halfSideMm = Math.min(sheet.width, sheet.height) / POINTS_PER_MM / 2
   const fits = (value: unknown): value is number => sane(value, 0, halfSideMm - 1e-6)
   const marginMm = [explicitMarginMm, format?.marginMm].find(fits) ?? DEFAULT_MARGIN_MM

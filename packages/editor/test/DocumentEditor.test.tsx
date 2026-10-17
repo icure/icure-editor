@@ -1,4 +1,5 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { TextSelection } from 'prosemirror-state'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -144,5 +145,57 @@ describe('the document editor', () => {
     const block = await screen.findByText(DEFAULT_LABELS.repeatEmpty)
     const lines = [...block.parentElement!.querySelectorAll('p')].map((p) => p.textContent)
     expect(lines).toEqual(['Head', DEFAULT_LABELS.repeatEmpty, 'Foot'])
+  })
+})
+
+describe('the Table menu', () => {
+  const L = DEFAULT_LABELS
+  const styledCell = (borders: string | null, label: string) => ({ type: 'table_cell', attrs: borders === null ? {} : { borders }, content: [paragraph(text(label))] })
+  const tableOf = (layout: 'grid' | 'layout', ...cells: object[]) => ({ type: 'table', attrs: { layout }, content: [{ type: 'table_row', content: cells }] })
+
+  async function menuAt(label: string) {
+    const user = userEvent.setup()
+    const ref = createRef<DocumentEditorHandle>()
+    render(<DocumentEditor ref={ref} initial={docJson(page(tableOf('grid', styledCell('b', 'Ruled bottom'), styledCell(null, 'Ruled all')), tableOf('layout', styledCell(null, 'Plain'), styledCell('t', 'Plain top'))))} provider={provider()} />)
+    await waitFor(() => expect(canvas()).toHaveTextContent('Plain top'))
+    const view = ref.current!.view!
+    let at = -1
+    view.state.doc.descendants((node, pos) => void (node.isText && node.text === label && (at = pos)))
+    act(() => view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, at + 1))))
+    await user.click(screen.getByRole('button', { name: L.tableMenu }))
+    const menu = screen.getByRole('menu')
+    const checked = within(menu)
+      .getAllByRole('menuitemradio')
+      .filter((item) => item.getAttribute('aria-checked') === 'true')
+      .map((item) => item.textContent)
+    return { user, menu, checked, view }
+  }
+
+  it('shows the table preset and the cell borders as checked choices', async () => {
+    expect((await menuAt('Ruled bottom')).checked).toEqual([L.table.layoutGrid, L.table.bordersBottom])
+  })
+
+  it('reads a cell with the default borders as all sides in a grid table', async () => {
+    expect((await menuAt('Ruled all')).checked).toEqual([L.table.layoutGrid, L.table.bordersAll])
+  })
+
+  it('reads the default as no border in a layout table, where "all borders" is unavailable', async () => {
+    const { user, menu, checked, view } = await menuAt('Plain')
+    expect(checked).toEqual([L.table.layoutPlain, L.table.bordersNone])
+    const all = within(menu).getByRole('menuitemradio', { name: L.table.bordersAll })
+    expect(all).toHaveAttribute('aria-disabled', 'true')
+    expect(all).toHaveAttribute('aria-checked', 'false')
+    const before = view.state.doc
+    await user.click(all)
+    expect(view.state.doc.eq(before)).toBe(true)
+    // Not actionable from the keyboard either; the menu stays open on it.
+    all.focus()
+    await user.keyboard('{Enter}')
+    expect(view.state.doc.eq(before)).toBe(true)
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+  })
+
+  it('shows a cell that draws some sides', async () => {
+    expect((await menuAt('Plain top')).checked).toEqual([L.table.layoutPlain, L.table.bordersTop])
   })
 })

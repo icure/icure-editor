@@ -7,6 +7,7 @@ import {
   alignmentOf,
   BLOCK_STYLES,
   blockStyleOf,
+  cellSidesOf,
   insertField,
   insertRepeat,
   insertTable,
@@ -15,6 +16,7 @@ import {
   setAlignment,
   setBlockStyle,
   setStyleMark,
+  tableLayoutOf,
   toggleEm,
   toggleStrong,
   toggleUnderline,
@@ -23,14 +25,32 @@ import {
 import type { FieldDescriptor, RepeatSourceDescriptor, TemplateSummary } from '../context.ts'
 import { bodyTableRow, setRowZone } from '../editing.ts'
 import type { EditorLabels, ShownAlignment, TableAction } from '../labels.ts'
-import { editorSchema, FONT_SIZES, FONTS, ROW_ZONES } from '../schema.ts'
+import { editorSchema, FONT_SIZES, FONTS, ROW_ZONES, type TableLayout } from '../schema.ts'
 import { AlignIcon, FieldIcon, ImageIcon, InsertTableIcon, RedoIcon, RepeatIcon, TableIcon, TemplateIcon, UndoIcon } from './icons.tsx'
-import { Menu } from './Menu.tsx'
+import { Menu, type MenuItem } from './Menu.tsx'
 import { Tooltip } from './Tooltip.tsx'
 
 const { marks } = editorSchema
 const SHOWN_ALIGNMENTS: readonly ShownAlignment[] = ['left', 'center', 'right', 'justify']
 const TABLE_ACTIONS: readonly TableAction[] = ['addRow', 'addColumn', 'deleteRow', 'deleteColumn', 'layoutGrid', 'layoutPlain', 'bordersAll', 'bordersNone', 'bordersTop', 'bordersBottom', 'bordersLeft', 'bordersRight']
+// The Table menu's choices: the table's preset and the cell's drawn sides (what each entry sets).
+const PRESETS: Partial<Record<TableAction, TableLayout>> = { layoutGrid: 'grid', layoutPlain: 'layout' }
+const SIDES: Partial<Record<TableAction, string>> = { bordersAll: 'tblr', bordersNone: '', bordersTop: 't', bordersBottom: 'b', bordersLeft: 'l', bordersRight: 'r' }
+
+// The Table menu's entries: the presets and the borders are choices showing the current one; in a
+// layout table "all borders" is unavailable (a cell framed all round belongs in a grid table).
+function tableItems(state: EditorState, run: (command: Command) => void, labels: EditorLabels, commands: Readonly<Record<TableAction, Command>>): MenuItem[] {
+  const layout = tableLayoutOf(state)
+  const sides = cellSidesOf(state)
+  return TABLE_ACTIONS.map((id) => {
+    const item = { id, label: labels.table[id], onSelect: () => run(commands[id]) }
+    const preset = PRESETS[id]
+    if (preset) return { ...item, set: 'preset', checked: layout === preset }
+    const drawn = SIDES[id]
+    if (drawn !== undefined) return { ...item, set: 'borders', checked: sides === drawn, ...(id === 'bordersAll' && layout === 'layout' ? { disabled: true } : {}) }
+    return item
+  })
+}
 // The colour picker's starting value (the picker needs a hex value).
 const DEFAULT_INK = '#000000'
 
@@ -116,7 +136,7 @@ export function Toolbar({ state, run, labels, fields, repeatSources, templates, 
         label={labels.tableMenu}
         icon={<TableIcon />}
         items={[
-          ...TABLE_ACTIONS.map((id) => ({ id, label: labels.table[id], onSelect: () => run(tableCommands[id]) })),
+          ...tableItems(state, run, labels, tableCommands),
           // In a repeating block's table (while the block is edited): the row's zone.
           ...(bodyTableRow(state) ? ROW_ZONES.map((zone) => ({ id: `zone-${zone}`, label: labels.rowZone[zone], onSelect: () => run(setRowZone(zone)) })) : []),
         ]}

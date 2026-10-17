@@ -77,11 +77,18 @@ const markdown = toMarkdown(doc, resolution)
 
 const pdfmake = preparePdfmake(pdfmakeInstance, { files: robotoVfs, families: { Roboto: { normal: 'Roboto-Regular.ttf', bold: 'Roboto-Medium.ttf', italics: 'Roboto-Italic.ttf', bolditalics: 'Roboto-MediumItalic.ttf' } } })
 const content = toPdfContent(doc, await withPdfImages(resolution), { title: 'Letter', createdAt: new Date(2026, 0, 1) })
-// A custom or landscape sheet: pass the editor's PageFormat, `{ ..., ...pdfPageOf(format) }`
+// The sheet: `page` is 'A4' (default), 'A5' or 'Letter', or a PageFormat in mm (any size, landscape
+// included; out of bounds falls back to A4); the editor's own format: `{ ..., ...pdfPageOf(format) }`.
 const bytes = await renderPdf(pdfmake, toPdfDefinition(content))
 ```
 
 The same document, resolution and `createdAt` give byte-identical PDFs.
+
+Tables: a table's `layout` is `grid` (default: every cell ruled) or `layout` (no rules: it only lays
+blocks out; the editor outlines it, the outputs never do). A cell's `borders` names the sides it
+draws, a subset of `tblr` (`''` none); the default is all four in a grid table and none in a layout
+table. A table nested in a layout table keeps its own rules. The Table menu sets both, its entries
+showing the current choice (`menuitemradio`); "all borders" is unavailable in a layout table.
 
 ## The data provider
 
@@ -214,7 +221,8 @@ into an editing area showing its template, fields as placeholders (`{event.title
 ## Security
 
 - **The schema is the only parser of pasted or loaded HTML.** There is no link, script or raw-HTML
-  node; every style value (colour, size, font, alignment) is checked against a closed pattern;
+  node; every style value (colour, size, font, alignment, a cell's `borders`, a table's `layout`)
+  is checked against a closed pattern;
   in pasted HTML, reference names (fields, sources, template ids, image ids) must match a bounded
   identifier pattern.
 - **Nothing is evaluated.** A field is looked up by key; its value is inserted as a text node, never

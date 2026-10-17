@@ -25,7 +25,9 @@ bun run --filter @icure/editor-forms test:e2e   # builds the library, then Playw
   - `box` / `options`: option boxes;
   - `blank`: a line to fill by hand;
   - `frame`: a framed section (a one-cell table);
-  - `cell(…, { colspan, rowspan, background, border })`.
+  - `layoutTable`: a table that only lays blocks out (no rules but the sides a cell names);
+  - `cell(…, { colspan, rowspan, background, border, borders })`: `borders` is the sides drawn, a
+    subset of `tblr` (`''` none; in a layout table, none unless named).
 - `src/provider.ts`: the field catalogue (patient, insurance, physician, entourage, date) with
   fictitious values. Clinical data stays blank, to be filled by hand.
 - `src/forms/*.ts`: one file per form. Each form has its own page format (`page`): A4, A5, A4
@@ -34,7 +36,9 @@ bun run --filter @icure/editor-forms test:e2e   # builds the library, then Playw
   - the form fits the schema;
   - every field it uses has a value;
   - it opens filled, with nothing unresolved;
-  - it previews as HTML and downloads as a PDF.
+  - it previews as HTML and downloads as a PDF;
+  - for the one- and two-sheet forms, the PDF of the form as written prints on that many sheets,
+    and the downloaded PDF has as many sheets as the editor shows.
 
 ## What the editor cannot express yet (and how the forms work around it)
 
@@ -42,18 +46,19 @@ bun run --filter @icure/editor-forms test:e2e   # builds the library, then Playw
 | --- | --- | --- |
 | A checkbox (and a font that has ☐ in the PDF) | `○` text (Roboto has no ballot box) | all |
 | Column widths (`colwidth` is stored, never drawn; columns come out equal) | colspans over a grid of equal columns | all table layouts |
-| Borderless or one-sided cell borders | white border colour; vertical rules dropped | all two-column layouts |
-| Rich table cells in the PDF (marks, colours, colspan, nested tables, images, headings) | none: the PDF prints each cell as plain text, so it does **not** match the editor for any of these forms | all |
 | A table that breaks across pages (pagination moves whole blocks; a taller table is clipped) | long grids cut into runs of small tables | lab request, BAT |
 | A forced page break (a page boundary in the JSON is not kept; reflow pulls content back) | a tall first block on the next page | surgical admission, lab request, compression |
-| Landscape and arbitrary sheets in the PDF (A4, A5 and Letter only, all portrait) | landscape in the editor and HTML only | radiology request |
-| Fill lines that stretch to the line's end, dotted leaders | underscore blanks of chosen lengths (they don't wrap in the PDF and overflow) | all |
+| Fill lines that stretch to the line's end, dotted leaders | underscore blanks of chosen lengths (they wrap in the PDF) | all |
 | Fixed-height boxes, cell padding and row height | empty paragraphs | all text areas |
 | Horizontal rules | a table border, or dropped | admission forms |
 | Rotated text, absolute positioning (address window over a background), small caps, highlights | horizontal text; tables; capitals; coloured cells | lab request, BAT, theatre admission |
 | Pictograms and product pictures | dropped (the provider has one image) | compression, hip order |
 | Fields that tick an option (`patient.sex` → ☒ F) | hand-ticked options | admission forms |
 | Spacing control (paragraph spacing, line height) | smaller sizes and empty paragraphs | dense forms |
+
+Done since the first version: cell borders and layout tables (`borders`, `layoutTable`, in place of
+white borders), rich table cells in the PDF (marks, colours, spans, nested tables, images,
+headings), and every sheet the editor has (landscape included) in the PDF.
 
 The plan to close these gaps is in
 [`docs/superpowers/plans/2026-10-16-form-features.md`](../../docs/superpowers/plans/2026-10-16-form-features.md).

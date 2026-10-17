@@ -1,6 +1,9 @@
 // Menu button (WAI-ARIA menu pattern): Enter, Space and the arrow keys open it on the first item,
 // arrows and Home / End move, Escape closes and returns focus to the trigger, Tab leaves (no keyboard
 // trap), a pointer press outside closes it. Consecutive items of one group are shown under its name.
+// An item with `checked` is one of a set of choices (`menuitemradio` with `aria-checked`); consecutive
+// items of one `set` form an unnamed group. A disabled item stays focusable (`aria-disabled`) and does
+// nothing.
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 
 import { Tooltip } from './Tooltip.tsx'
@@ -9,6 +12,10 @@ export interface MenuItem {
   readonly id: string
   readonly label: string
   readonly group?: string
+  // The set of choices it belongs to, and whether it is the current one.
+  readonly set?: string
+  readonly checked?: boolean
+  readonly disabled?: boolean
   readonly onSelect: () => void
 }
 
@@ -22,6 +29,7 @@ interface MenuProps {
 
 interface Segment {
   readonly group: string | undefined
+  readonly set: string | undefined
   readonly items: { readonly item: MenuItem; readonly index: number }[]
 }
 
@@ -29,8 +37,8 @@ function segmentsOf(items: readonly MenuItem[]): Segment[] {
   const segments: Segment[] = []
   items.forEach((item, index) => {
     const last = segments.at(-1)
-    if (last && last.group === item.group) last.items.push({ item, index })
-    else segments.push({ group: item.group, items: [{ item, index }] })
+    if (last && last.group === item.group && last.set === item.set) last.items.push({ item, index })
+    else segments.push({ group: item.group, set: item.set, items: [{ item, index }] })
   })
   return segments
 }
@@ -124,9 +132,12 @@ export function Menu({ label, items, disabled = false, icon }: MenuProps) {
                 }}
                 type="button"
                 className="ie-menu-item"
-                role="menuitem"
+                role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
+                aria-checked={item.checked}
+                aria-disabled={item.disabled || undefined}
                 tabIndex={index === active ? 0 : -1}
                 onClick={() => {
+                  if (item.disabled) return
                   close(false)
                   item.onSelect()
                 }}
@@ -139,6 +150,10 @@ export function Menu({ label, items, disabled = false, icon }: MenuProps) {
                 <span className="ie-menu-group-name" aria-hidden="true">
                   {segment.group}
                 </span>
+                {buttons}
+              </div>
+            ) : segment.set ? (
+              <div key={`set-${segmentIndex}`} role="group" className="ie-menu-group">
                 {buttons}
               </div>
             ) : (

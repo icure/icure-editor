@@ -253,6 +253,17 @@
   background: var(--ie-surface-sunken);
 }
 
+/* The current choice of a set: marked by weight and a rule, not by colour alone. */
+.ie-menu-item[aria-checked='true'] {
+  box-shadow: inset 3px 0 0 var(--ie-line-strong);
+  font-weight: 600;
+}
+
+.ie-menu-item[aria-disabled='true'] {
+  color: var(--ie-ink-muted);
+  cursor: not-allowed;
+}
+
 .ie-status {
   display: flex;
   flex-wrap: wrap;
@@ -362,15 +373,19 @@
 }
 
 /* A layout table: no rules of its own (a cell names the sides it draws); a dashed outline in the
-   editor only, never printed. */
-.ie-page table[data-layout='layout'] td,
-.ie-page table[data-layout='layout'] th {
+   editor only, never printed. Its own cells only: a grid table nested in it keeps its rules. */
+.ie-page table[data-layout='layout'] > tbody > tr > td,
+.ie-page table[data-layout='layout'] > tbody > tr > th,
+.ie-page table[data-layout='layout'] > tr > td,
+.ie-page table[data-layout='layout'] > tr > th {
   border-style: dashed;
 }
 
 @media print {
-  .ie-page table[data-layout='layout'] td,
-  .ie-page table[data-layout='layout'] th {
+  .ie-page table[data-layout='layout'] > tbody > tr > td,
+  .ie-page table[data-layout='layout'] > tbody > tr > th,
+  .ie-page table[data-layout='layout'] > tr > td,
+  .ie-page table[data-layout='layout'] > tr > th {
     border-style: none;
   }
 }

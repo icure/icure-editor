@@ -1,9 +1,12 @@
 // Every form: valid against the editor's schema, opened with its fields filled and nothing left
 // unresolved, previewed as HTML and downloaded as a PDF.
+import { readdirSync, readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 
-import { DEFAULT_LABELS, editorSchema, resolveDocument, toEditorDocument, toPdfContent, toPdfDefinition } from '@icure/editor'
-import { expect, test } from '@playwright/test'
+import { A4_PAGE, DEFAULT_LABELS, editorSchema, pdfPageOf, preparePdfmake, renderPdf, resolveDocument, toEditorDocument, toPdfContent, toPdfDefinition, type PdfmakeInstance } from '@icure/editor'
+import { expect, test, type Page } from '@playwright/test'
 
 import { FORMS } from '../src/forms/index.ts'
 import { APP, EDITOR_LABELS } from '../src/labels.ts'
@@ -58,12 +61,48 @@ test('the PDF of the radiology request holds the heading of its frame as a bold 
   expect(runs).toContainEqual(expect.objectContaining({ text: 'Médecin prescripteur', bold: true }))
 })
 
-test('the PDF of the radiology request is a landscape A4 sheet', async ({ page }) => {
-  await page.goto('/?form=radiology-request')
+// The PDF the app downloads for a form, as latin1 text (its object dictionaries are not compressed).
+async function downloadedPdf(page: Page, id: string): Promise<string> {
+  await page.goto(`/?form=${id}`)
   await expect(page.getByRole('textbox', { name: canvasName })).toBeVisible()
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: APP.downloadPdf }).click()
-  const pdf = (await readFile(await (await download).path())).toString('latin1')
+  return (await readFile(await (await download).path())).toString('latin1')
+}
+
+// The sheets of a PDF: its `/Type /Page` objects (not the `/Pages` tree).
+const pageCount = (pdf: string): number => pdf.match(/\/Type\s*\/Page(?![a-zA-Z])/g)?.length ?? 0
+
+// pdfmake's Node build with its own Roboto files (the app uses the browser build and the same fonts).
+const nodeRequire = createRequire(import.meta.url)
+let pdfmake: PdfmakeInstance | null = null
+function nodePdfmake(): PdfmakeInstance {
+  if (pdfmake) return pdfmake
+  const dir = join(dirname(nodeRequire.resolve('pdfmake/package.json')), 'fonts/Roboto')
+  const files = Object.fromEntries(readdirSync(dir).map((name) => [name, new Uint8Array(readFileSync(join(dir, name)))]))
+  pdfmake = preparePdfmake(nodeRequire('pdfmake') as PdfmakeInstance, { files, families: { Roboto: { normal: 'Roboto-Regular.ttf', bold: 'Roboto-Medium.ttf', italics: 'Roboto-Italic.ttf', bolditalics: 'Roboto-MediumItalic.ttf' } } })
+  return pdfmake
+}
+
+// The sheets each form, as written (before the editor paginates it), prints on.
+const SHEETS: Readonly<Record<string, number>> = { 'radiology-request': 1, 'imaging-request': 1, 'hip-prosthesis-order': 1, 'compression-prescription': 2 }
+for (const [id, sheets] of Object.entries(SHEETS)) {
+  const form = FORMS.find((f) => f.id === id)!
+  test(`the PDF of ${form.title}, as written, prints on ${sheets} sheet(s)`, async () => {
+    const doc = toEditorDocument(form.content)
+    const content = toPdfContent(doc, await resolveDocument(doc, createFormsProvider(), { rootId: form.id }), { title: form.title, ...pdfPageOf(form.page ?? A4_PAGE) })
+    const pdf = Buffer.from(await renderPdf(nodePdfmake(), toPdfDefinition(content))).toString('latin1')
+    expect(pageCount(pdf)).toBe(sheets)
+  })
+
+  test(`the downloaded PDF of ${form.title} has as many sheets as the editor shows`, async ({ page }) => {
+    const pdf = await downloadedPdf(page, id)
+    expect(pageCount(pdf)).toBe(await page.locator('.ie-canvas .ie-page').count())
+  })
+}
+
+test('the PDF of the radiology request is a landscape A4 sheet', async ({ page }) => {
+  const pdf = await downloadedPdf(page, 'radiology-request')
   const box = /\/MediaBox\s*\[\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\]/.exec(pdf)!.slice(1).map(Number)
   expect(box[2]! - box[0]!).toBeCloseTo(841.89, 0)
   expect(box[3]! - box[1]!).toBeCloseTo(595.28, 0)

@@ -330,7 +330,7 @@ describe('the toolbar inside an editing area', () => {
     })
     act(() => nested.dispatch(nested.state.tr.setSelection(TextSelection.create(nested.state.doc, itemCell + 2))))
     await user.click(within(toolbar()).getByRole('button', { name: L.tableMenu }))
-    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([...Object.values(L.table), L.rowZone.header, L.rowZone.body, L.rowZone.footer])
+    expect([...screen.getByRole('menu').querySelectorAll('[role^="menuitem"]')].map((item) => item.textContent)).toEqual([...Object.values(L.table), L.rowZone.header, L.rowZone.body, L.rowZone.footer])
     await user.click(screen.getByRole('menuitem', { name: L.rowZone.footer }))
     expect(area().querySelectorAll('tr[data-zone="footer"]')).toHaveLength(1)
     fireEvent.click(within(area()).getByRole('button', { name: IE.done }))

@@ -54,6 +54,9 @@ export function toHtml(doc: ProseNode, resolution: Resolution, options: HtmlOpti
   return host.innerHTML
 }
 
+// The cells of a layout table, not those of a table nested in one (the schema writes a tbody).
+const LAYOUT_CELLS = ['tbody > tr > td', 'tbody > tr > th', 'tr > td', 'tr > th'].map((path) => `.ie-page table[data-layout='layout'] > ${path}`).join(',')
+
 const escapeText = (value: string): string => value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
 export interface HtmlDocumentOptions extends HtmlOptions {
@@ -83,8 +86,9 @@ export function htmlDocumentCss(page: PageFormat = A4_PAGE): string {
     '.ie-page p{margin:0;min-height:1em}',
     '.ie-page table{border-collapse:collapse;width:100%}',
     '.ie-page td,.ie-page th{border:1px solid #8a8f98;padding:2px 4px;vertical-align:top}',
-    // A layout table draws no rules but those a cell names (inline per-side styles, which win).
-    ".ie-page table[data-layout='layout'] td,.ie-page table[data-layout='layout'] th{border-style:none}",
+    // A layout table draws no rules but those a cell names (inline per-side styles, which win). Its
+    // own cells only (child combinators): a grid table nested in it keeps its rules, as in the PDF.
+    `${LAYOUT_CELLS}{border-style:none}`,
     '.ie-page img{max-width:100%;height:auto;vertical-align:bottom}',
     `@media print{html,body{width:${width};background:none}.ie-page{margin:0;box-shadow:none}}`,
   ].join('')

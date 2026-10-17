@@ -77,27 +77,31 @@ export function toPdfDefinition(content: PdfContent, { fontFamily = DEFAULT_PDF_
     images[name] = dataUri
     return name
   }
-  const block = (b: Exclude<PdfBlock, { kind: 'pageBreak' }>): DocNode => {
+  // Blocks on the page are spaced by SPACE_AFTER. Inside a cell they follow the editor, whose
+  // paragraphs, tables and images have no margin (a cell holds a form's lines, set tight); headings
+  // keep their spacing.
+  const block = (b: Exclude<PdfBlock, { kind: 'pageBreak' }>, inCell = false): DocNode => {
+    const after = inCell ? 0 : SPACE_AFTER
     switch (b.kind) {
       case 'heading':
         return { text: b.runs.map((r) => runNode(r, fonts)), bold: true, fontSize: HEADING_SIZES[b.level], ...(b.align ? { alignment: b.align } : {}), margin: [0, b.level === 1 ? 0 : SPACE_AFTER, 0, SPACE_AFTER] }
       case 'paragraph':
-        return { text: b.runs.map((r) => runNode(r, fonts)), ...(b.size ? { fontSize: b.size } : {}), ...(b.align ? { alignment: b.align } : {}), margin: [0, 0, 0, SPACE_AFTER] }
+        return { text: b.runs.map((r) => runNode(r, fonts)), ...(b.size ? { fontSize: b.size } : {}), ...(b.align ? { alignment: b.align } : {}), margin: [0, 0, 0, after] }
       case 'table': {
         const grid = tableGrid(b.rows, cellNode)
         const columns = Math.max(1, ...grid.map((row) => row.length))
         return {
           table: { headerRows: Math.min(b.headerRows, grid.length), dontBreakRows: true, widths: Array(columns).fill('*'), body: grid.map((row) => [...row, ...Array.from({ length: columns - row.length }, () => ({}))]) },
           layout: { hLineColor: () => BORDER, vLineColor: () => BORDER, hLineWidth: () => 0.5, vLineWidth: () => 0.5 },
-          margin: [0, 0, 0, SPACE_AFTER],
+          margin: [0, 0, 0, after],
         }
       }
       case 'image':
-        return { image: imageName(b.dataUri), ...(b.widthPt ? { width: b.widthPt } : {}), ...(b.align && b.align !== 'justify' ? { alignment: b.align } : {}), margin: [0, 0, 0, SPACE_AFTER] }
+        return { image: imageName(b.dataUri), ...(b.widthPt ? { width: b.widthPt } : {}), ...(b.align && b.align !== 'justify' ? { alignment: b.align } : {}), margin: [0, 0, 0, after] }
     }
   }
   const cellNode = (cell: PdfCell, rowSpan: number): DocNode => {
-    const stack = cell.blocks.filter((x): x is Exclude<PdfBlock, { kind: 'pageBreak' }> => x.kind !== 'pageBreak').map(block)
+    const stack = cell.blocks.filter((x): x is Exclude<PdfBlock, { kind: 'pageBreak' }> => x.kind !== 'pageBreak').map((x) => block(x, true))
     const fillColor = cell.fill ?? (cell.header ? HEADER_FILL : undefined)
     return {
       stack: stack.length > 0 ? stack : [{ text: '' }],

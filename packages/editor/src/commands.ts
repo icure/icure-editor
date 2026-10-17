@@ -1,14 +1,14 @@
 // The toolbar's commands: marks, block style and alignment, tables, fields, repeating blocks,
 // embedded templates and images, as ProseMirror commands over the editor schema.
 import { setBlockType, toggleMark } from 'prosemirror-commands'
-import type { MarkType, Node as ProseNode } from 'prosemirror-model'
+import type { MarkType, Node as ProseNode, ResolvedPos } from 'prosemirror-model'
 import { NodeSelection, type Command, type EditorState } from 'prosemirror-state'
 import { CellSelection, selectionCell } from 'prosemirror-tables'
 
 import type { RepeatSourceDescriptor } from './context.ts'
 import { fieldKey, imageKey, repeatKey, templateKey } from './document.ts'
 import { clampImageWidth, safeAltText, safeImageId } from './images.ts'
-import { editorSchema, safeAlignment, safeBorders, safeIdentifier, safeLayout, type Alignment, type TableLayout } from './schema.ts'
+import { cellSides, DEFAULT_BORDERS, editorSchema, safeAlignment, safeBorders, safeIdentifier, safeLayout, type Alignment, type TableLayout } from './schema.ts'
 
 const { nodes, marks } = editorSchema
 
@@ -83,7 +83,7 @@ export const setCellBorders =
     const positions: number[] = []
     if (state.selection instanceof CellSelection) state.selection.forEachCell((_, pos) => positions.push(pos))
     else {
-      const $cell = selectionCell(state)
+      const $cell = cellOf(state)
       if (!$cell) return false
       positions.push($cell.pos)
     }
@@ -96,6 +96,39 @@ export const setCellBorders =
     }
     return true
   }
+
+// The cell of the selection (a cell selection's head cell), or null outside a table
+// (prosemirror-tables' `selectionCell` throws there).
+function cellOf(state: EditorState): ResolvedPos | null {
+  try {
+    return selectionCell(state)
+  } catch {
+    return null
+  }
+}
+
+// The preset of the table around the selection; null outside a table.
+export function tableLayoutOf(state: EditorState): TableLayout | null {
+  const { $from } = state.selection
+  for (let depth = $from.depth; depth > 0; depth--) {
+    const node = $from.node(depth)
+    if (node.type === nodes.table) return safeLayout(node.attrs.layout)
+  }
+  return null
+}
+
+// The sides the selection's cell draws (a subset of 'tblr', what prints: in a layout table the
+// default draws none); null outside a table.
+export function cellSidesOf(state: EditorState): string | null {
+  const $cell = cellOf(state)
+  const cell = $cell?.nodeAfter
+  if (!$cell || !cell) return null
+  const table = $cell.node(-1)
+  const sides = cellSides(table.type === nodes.table ? table.attrs.layout : null, cell.attrs.borders)
+  if (!sides) return DEFAULT_BORDERS
+  const [left, top, right, bottom] = sides
+  return `${top ? 't' : ''}${bottom ? 'b' : ''}${left ? 'l' : ''}${right ? 'r' : ''}`
+}
 
 // The preset of the table around the selection: `grid` (ruled cells) or `layout` (no rules unless a
 // cell names its sides; the editor outlines it, the output never does).

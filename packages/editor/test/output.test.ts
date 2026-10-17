@@ -8,6 +8,7 @@ import { htmlDocumentCss, toHtml, toHtmlDocument } from '../src/output/html.ts'
 import { preparePdfmake, renderPdf, toPdfDefinition, type PdfmakeInstance } from '../src/output/pdf.ts'
 import { pdfPageOf, toPdfContent, type PdfBlock } from '../src/output/pdfContent.ts'
 import { documentFileName } from '../src/output/browser.ts'
+import type { DocNode, PdfCell, PdfContent, PdfPageSize } from '../src/index.ts'
 import { resolveDocument, type Resolution } from '../src/resolve.ts'
 import { aligned, cell, doc, fakeProvider, field, image, page, paragraph, PNG_DATA_URI, repeat, row, table, text } from './helpers.ts'
 
@@ -88,6 +89,36 @@ describe('PDF output', () => {
     }
     // A margin that leaves no room is dropped, the sheet is kept.
     for (const marginMm of [150, -5, Number.NaN]) expect(toPdfContent(document, r, { title: 'Hostile', page: { widthMm: 297, heightMm: 210, marginMm } })).toMatchObject({ page: { width: expect.closeTo(841.89, 1) }, marginMm: 20 })
+  })
+
+  it('falls back to A4 for a page name that is not one of its own sizes (inherited keys included)', async () => {
+    const document = doc(page(paragraph(text('x'))))
+    const r = await resolveDocument(document, fakeProvider({}))
+    for (const name of ['toString', 'constructor', '__proto__', 'hasOwnProperty', 'B5']) {
+      const content = toPdfContent(document, r, { title: 'Hostile', page: name as never })
+      expect(content.page).toEqual({ width: 595.28, height: 841.89 })
+      expect(toPdfDefinition(content).pageSize).toEqual({ width: 595.28, height: 841.89 })
+    }
+    expect(toPdfContent(document, r, { title: 'A5', page: 'A5' }).page).toEqual({ width: 419.53, height: 595.28 })
+  })
+
+  it('sets the blocks of a cell tight, as the editor does, and spaces those of the page', async () => {
+    const heading = { type: 'heading', attrs: { level: 2 }, content: [text('Title')] }
+    const document = doc(page(paragraph(text('Page line')), table(row({ type: 'table_cell', content: [heading, paragraph(text('One')), paragraph(text('Two')), table(row(cell('table_cell', text('Nested'))))] }))))
+    const { content } = toPdfDefinition(toPdfContent(document, await resolveDocument(document, fakeProvider({})), { title: 'Cells' }))
+    expect(content[0]).toMatchObject({ margin: [0, 0, 0, 6] })
+    expect(content[1]).toMatchObject({ margin: [0, 0, 0, 6] })
+    const stack = ((content[1] as { table: { body: { stack: Record<string, unknown>[] }[][] } }).table.body[0]![0]!).stack
+    // Headings keep their spacing; paragraphs and a nested table have none.
+    expect(stack.map((node) => node.margin)).toEqual([[0, 6, 0, 6], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+  })
+
+  it('prints content a host builds from the exported types, a table cell included', () => {
+    const cellOf: PdfCell = { blocks: [{ kind: 'paragraph', runs: [{ text: 'Host cell' }] }], colSpan: 1, rowSpan: 1, borders: [false, false, false, true] }
+    const sheet: PdfPageSize = { width: 400, height: 600 }
+    const content: PdfContent = { title: 'Host', page: sheet, marginMm: 10, blocks: [{ kind: 'table', headerRows: 0, rows: [[cellOf]] }] }
+    const [node] = toPdfDefinition(content).content as DocNode[]
+    expect((node as { table: { body: DocNode[][] } }).table.body[0]![0]).toMatchObject({ stack: [{ text: [{ text: 'Host cell' }] }], border: [false, false, false, true] })
   })
 
   it('places an image as its own block, sized in points and capped by the page width', async () => {
@@ -197,7 +228,9 @@ describe('PDF output', () => {
 
     it('never prints the editor outline of a layout table', () => {
       const css = htmlDocumentCss()
-      expect(css).toContain("table[data-layout='layout'] td")
+      // A layout table's own cells only: a grid table nested in one keeps its rules.
+      expect(css).toContain(".ie-page table[data-layout='layout'] > tbody > tr > td")
+      expect(css).not.toMatch(/table\[data-layout='layout'\] t[dh]/)
       expect(css).not.toMatch(/dashed/)
     })
 

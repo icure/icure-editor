@@ -174,7 +174,10 @@ export type TableLayout = (typeof TABLE_LAYOUTS)[number]
 export const safeLayout = (value: unknown): TableLayout => (value === 'layout' ? 'layout' : 'grid')
 
 // The sides a cell draws as [left, top, right, bottom]; undefined: all four, nothing to say.
-// One reading for the HTML and the PDF.
+// The PDF's reading. The HTML and the editor draw the same sides from the same `safeBorders` value:
+// a cell that names its sides gets inline per-side styles (`cellBorders.setDOMAttr`), and a layout
+// table's own cells (child combinators, so a table nested in one keeps its rules) lose the default
+// rules in the stylesheet (`htmlDocumentCss`, `editor.css`).
 export const cellSides = (layout: unknown, borders: unknown): readonly [boolean, boolean, boolean, boolean] | undefined => {
   const sides = safeBorders(borders)
   if (sides === DEFAULT_BORDERS) return safeLayout(layout) === 'layout' ? [false, false, false, false] : undefined

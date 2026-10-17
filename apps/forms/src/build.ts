@@ -40,6 +40,8 @@ export interface CellOptions {
   readonly width?: number
   readonly background?: string
   readonly border?: string
+  // The sides drawn, a subset of `tblr` ('' none); in a layout table, none unless named.
+  readonly borders?: string
   readonly header?: boolean
 }
 const isBlock = (node: Json): boolean => ['paragraph', 'heading', 'table', 'repeat', 'template_ref'].includes(String(node.type))
@@ -48,12 +50,14 @@ export const cell = (content: Json[] | Json | string, opts: CellOptions = {}): J
   const blocks = list.length === 0 ? [p()] : list.every(isBlock) ? list : [p(...list)]
   return {
     type: opts.header ? 'table_header' : 'table_cell',
-    attrs: { colspan: opts.colspan ?? 1, rowspan: opts.rowspan ?? 1, colwidth: opts.width ? [opts.width] : null, background: opts.background ?? null, borderColor: opts.border ?? null },
+    attrs: { colspan: opts.colspan ?? 1, rowspan: opts.rowspan ?? 1, colwidth: opts.width ? [opts.width] : null, background: opts.background ?? null, borderColor: opts.border ?? null, ...(opts.borders === undefined ? {} : { borders: opts.borders }) },
     content: blocks,
   }
 }
 export const row = (...cells: Json[]): Json => ({ type: 'table_row', content: cells })
 export const table = (...rows: Json[]): Json => ({ type: 'table', content: rows })
+// A table that only lays blocks out: no rules, except the sides a cell names with `borders`.
+export const layoutTable = (...rows: Json[]): Json => ({ type: 'table', attrs: { layout: 'layout' }, content: rows })
 // A framed section: a one-cell table.
 export const frame = (blocks: Json[], opts: CellOptions = {}): Json => table(row(cell(blocks, opts)))
 

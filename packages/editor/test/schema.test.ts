@@ -1,7 +1,7 @@
 import { DOMParser as ProseParser, DOMSerializer } from 'prosemirror-model'
 import { describe, expect, it } from 'vitest'
 
-import { editorSchema, safeColour, safeFont, safeSize } from '../src/schema.ts'
+import { editorSchema, safeBorders, safeColour, safeFont, safeSize } from '../src/schema.ts'
 import { InvalidDocumentError, toEditorDocument } from '../src/document.ts'
 import { cell, docJson, page, paragraph, table, text, zoneRow, zoned } from './helpers.ts'
 
@@ -15,6 +15,47 @@ const serialise = (html: string) => {
   host.append(DOMSerializer.fromSchema(editorSchema).serializeFragment(parse(html).content))
   return host.innerHTML
 }
+
+describe('cell borders and layout tables', () => {
+  it('round-trips the sides of a cell and the preset of a table through copy and paste', () => {
+    const doc = toEditorDocument(docJson(page({ type: 'table', attrs: { layout: 'layout' }, content: [{ type: 'table_row', content: [{ type: 'table_cell', attrs: { borders: 'bl' }, content: [paragraph(text('a'))] }, { type: 'table_cell', attrs: { borders: '' }, content: [paragraph(text('b'))] }, cell('table_cell', text('c'))] }] })))
+    const host = document.createElement('div')
+    host.append(DOMSerializer.fromSchema(editorSchema).serializeFragment(doc.content))
+    expect(host.innerHTML).toContain('<table data-layout="layout">')
+    const [left, none, plain] = [...host.querySelectorAll('td')]
+    expect([left!.style.borderTopStyle, left!.style.borderRightStyle, left!.style.borderBottomStyle, left!.style.borderLeftStyle]).toEqual(['none', 'none', 'solid', 'solid'])
+    expect(none!.style.borderTopStyle).toBe('none')
+    expect(plain!.hasAttribute('style')).toBe(false)
+    const back = ProseParser.fromSchema(editorSchema).parse(host)
+    const row = back.child(0).child(0).child(0)
+    expect(back.child(0).child(0).attrs.layout).toBe('layout')
+    expect(row.child(0).attrs.borders).toBe('bl')
+    expect(row.child(1).attrs.borders).toBe('')
+    expect(row.child(2).attrs.borders).toBe('tblr')
+  })
+
+  it('draws a default cell and a ruled table as plain markup', () => {
+    expect(serialise('<div class="ie-page"><table><tr><td><p>a</p></td></tr></table></div>')).toBe('<div class="ie-page"><table><tbody><tr><td><p>a</p></td></tr></tbody></table></div>')
+  })
+
+  it('drops a data-borders that is not a set of sides, and any style it carries', () => {
+    for (const hostile of ['x;background:url(https://x.example/a.png)', 'tblrt', 'T', 'tb;color:red']) {
+      const html = serialise(`<div class="ie-page"><table data-layout="x;y"><tr><td data-borders="${hostile}"><p>a</p></td></tr></table></div>`)
+      expect(html).not.toContain('url(')
+      expect(html).not.toContain('data-')
+      expect(html).not.toContain('style')
+    }
+    expect(safeBorders('lt')).toBe('tl')
+    expect(safeBorders(42)).toBe('tblr')
+  })
+
+  it('writes only safe sides when loaded from JSON with hostile attributes', () => {
+    const doc = toEditorDocument(docJson(page({ type: 'table', attrs: { layout: '<x>' }, content: [{ type: 'table_row', content: [{ type: 'table_cell', attrs: { borders: 'x;background:url(y)' }, content: [paragraph(text('a'))] }] }] })))
+    const host = document.createElement('div')
+    host.append(DOMSerializer.fromSchema(editorSchema).serializeFragment(doc.content))
+    expect(host.innerHTML).toBe('<div class="ie-page"><table><tbody><tr><td><p>a</p></td></tr></tbody></table></div>')
+  })
+})
 
 describe('the schema as the only parser of pasted HTML', () => {
   it('parses a pasted block without zones into a valid body', () => {

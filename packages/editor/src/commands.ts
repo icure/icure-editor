@@ -3,11 +3,12 @@
 import { setBlockType, toggleMark } from 'prosemirror-commands'
 import type { MarkType, Node as ProseNode } from 'prosemirror-model'
 import { NodeSelection, type Command, type EditorState } from 'prosemirror-state'
+import { setCellAttr } from 'prosemirror-tables'
 
 import type { RepeatSourceDescriptor } from './context.ts'
 import { fieldKey, imageKey, repeatKey, templateKey } from './document.ts'
 import { clampImageWidth, safeAltText, safeImageId } from './images.ts'
-import { editorSchema, safeAlignment, safeIdentifier, type Alignment } from './schema.ts'
+import { editorSchema, safeAlignment, safeBorders, safeIdentifier, safeLayout, type Alignment, type TableLayout } from './schema.ts'
 
 const { nodes, marks } = editorSchema
 
@@ -71,6 +72,24 @@ export const insertTable: Command = (state, dispatch) => {
   const table = nodes.table.create(null, [nodes.table_row.create(null, [cell(), cell()]), nodes.table_row.create(null, [cell(), cell()])])
   return insert(table)(state, dispatch)
 }
+
+// The sides the selected cells draw (see `safeBorders`): 'tblr' all, '' none, 't' the top only.
+export const setCellBorders = (sides: string): Command => setCellAttr('borders', safeBorders(sides))
+
+// The preset of the table around the selection: `grid` (ruled cells) or `layout` (no rules unless a
+// cell names its sides; the editor outlines it, the output never does).
+export const setTableLayout =
+  (layout: TableLayout): Command =>
+  (state, dispatch) => {
+    const { $from } = state.selection
+    for (let depth = $from.depth; depth > 0; depth--) {
+      const node = $from.node(depth)
+      if (node.type !== nodes.table) continue
+      if (dispatch) dispatch(state.tr.setNodeMarkup($from.before(depth), undefined, { ...node.attrs, layout: safeLayout(layout) }))
+      return true
+    }
+    return false
+  }
 
 const fieldNode = (name: string, label: string | null = null) => nodes.variable.create({ name, label })
 

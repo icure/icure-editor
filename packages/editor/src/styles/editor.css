@@ -361,6 +361,20 @@
   vertical-align: top;
 }
 
+/* A layout table: no rules of its own (a cell names the sides it draws); a dashed outline in the
+   editor only, never printed. */
+.ie-page table[data-layout='layout'] td,
+.ie-page table[data-layout='layout'] th {
+  border-style: dashed;
+}
+
+@media print {
+  .ie-page table[data-layout='layout'] td,
+  .ie-page table[data-layout='layout'] th {
+    border-style: none;
+  }
+}
+
 .ie-page img {
   max-inline-size: 100%;
   block-size: auto;

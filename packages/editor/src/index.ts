@@ -22,7 +22,7 @@ export type {
 
 // The document model.
 export type { Node as EditorNode } from 'prosemirror-model'
-export { ALIGNMENTS, editorSchema, FONT_SIZES, FONTS, safeAlignment, safeColour, safeFont, safeIdentifier, safeSize, type Alignment, type EditorSchema } from './schema.ts'
+export { ALIGNMENTS, cellSides, DEFAULT_BORDERS, editorSchema, FONT_SIZES, FONTS, safeAlignment, safeBorders, safeColour, safeFont, safeIdentifier, safeLayout, safeSize, TABLE_LAYOUTS, type TableLayout, type Alignment, type EditorSchema } from './schema.ts'
 export { EMPTY_DOCUMENT, fieldKey, imageKey, InvalidDocumentError, isEditorDocument, repeatKey, templateKey, toEditorDocument } from './document.ts'
 
 // Resolution and rendering.

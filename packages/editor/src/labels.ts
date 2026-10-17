@@ -6,7 +6,21 @@ import type { UnresolvedReason } from './context.ts'
 import type { RowZone } from './schema.ts'
 
 export type ShownAlignment = 'left' | 'center' | 'right' | 'justify'
-export type TableAction = 'addRow' | 'addColumn' | 'deleteRow' | 'deleteColumn'
+export type TableAction =
+  | 'addRow'
+  | 'addColumn'
+  | 'deleteRow'
+  | 'deleteColumn'
+  // The table's preset: ruled cells, or a layout without rules.
+  | 'layoutGrid'
+  | 'layoutPlain'
+  // The sides the selected cells draw: all, none, or one only.
+  | 'bordersAll'
+  | 'bordersNone'
+  | 'bordersTop'
+  | 'bordersBottom'
+  | 'bordersLeft'
+  | 'bordersRight'
 
 // The editing area of a repeating block or an embedded template opened in place.
 export interface InlineEditingLabels {
@@ -107,7 +121,20 @@ export const DEFAULT_LABELS: EditorLabels = {
   align: { left: 'Align left', center: 'Centre', right: 'Align right', justify: 'Justify' },
   insertTable: 'Insert table',
   tableMenu: 'Table',
-  table: { addRow: 'Add row', addColumn: 'Add column', deleteRow: 'Delete row', deleteColumn: 'Delete column' },
+  table: {
+    addRow: 'Add row',
+    addColumn: 'Add column',
+    deleteRow: 'Delete row',
+    deleteColumn: 'Delete column',
+    layoutGrid: 'Table with borders',
+    layoutPlain: 'Table without borders (layout)',
+    bordersAll: 'Borders: all',
+    bordersNone: 'Borders: none',
+    bordersTop: 'Borders: top only',
+    bordersBottom: 'Borders: bottom only',
+    bordersLeft: 'Borders: left only',
+    bordersRight: 'Borders: right only',
+  },
   rowZone: { header: 'Make it a header row', body: 'Make it a repeated row', footer: 'Make it a footer row' },
   insertField: 'Insert field',
   insertBlock: 'Insert repeating block',

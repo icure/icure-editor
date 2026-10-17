@@ -30,7 +30,7 @@ import { Tooltip } from './Tooltip.tsx'
 
 const { marks } = editorSchema
 const SHOWN_ALIGNMENTS: readonly ShownAlignment[] = ['left', 'center', 'right', 'justify']
-const TABLE_ACTIONS: readonly TableAction[] = ['addRow', 'addColumn', 'deleteRow', 'deleteColumn']
+const TABLE_ACTIONS: readonly TableAction[] = ['addRow', 'addColumn', 'deleteRow', 'deleteColumn', 'layoutGrid', 'layoutPlain', 'bordersAll', 'bordersNone', 'bordersTop', 'bordersBottom', 'bordersLeft', 'bordersRight']
 // The colour picker's starting value (the picker needs a hex value).
 const DEFAULT_INK = '#000000'
 

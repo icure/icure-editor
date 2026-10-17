@@ -161,6 +161,38 @@ const image: NodeSpec = {
   ],
 }
 
+// A cell's borders: the sides drawn, a subset of t(op) b(ottom) l(eft) r(ight) in this order; ''
+// is none. Anything else is the default, all four. In a `layout` table the default means "no
+// borders" (a cell must name the sides it draws), so a single rule under a heading is one cell
+// attribute; a cell that must be framed all round belongs in a `grid` table.
+export const DEFAULT_BORDERS = 'tblr'
+const BORDERS = /^[tblr]{0,4}$/
+export const safeBorders = (value: unknown): string => (typeof value === 'string' && BORDERS.test(value) ? [...DEFAULT_BORDERS].filter((side) => value.includes(side)).join('') : DEFAULT_BORDERS)
+
+export const TABLE_LAYOUTS = ['grid', 'layout'] as const
+export type TableLayout = (typeof TABLE_LAYOUTS)[number]
+export const safeLayout = (value: unknown): TableLayout => (value === 'layout' ? 'layout' : 'grid')
+
+// The sides a cell draws as [left, top, right, bottom]; undefined: all four, nothing to say.
+// One reading for the HTML and the PDF.
+export const cellSides = (layout: unknown, borders: unknown): readonly [boolean, boolean, boolean, boolean] | undefined => {
+  const sides = safeBorders(borders)
+  if (sides === DEFAULT_BORDERS) return safeLayout(layout) === 'layout' ? [false, false, false, false] : undefined
+  return [sides.includes('l'), sides.includes('t'), sides.includes('r'), sides.includes('b')]
+}
+
+const cellBorders = {
+  default: DEFAULT_BORDERS,
+  getFromDOM: (dom: HTMLElement) => safeBorders(dom.getAttribute('data-borders')),
+  setDOMAttr: (value: unknown, attrs: Record<string, unknown>) => {
+    const sides = safeBorders(value)
+    if (sides === DEFAULT_BORDERS) return
+    attrs['data-borders'] = sides
+    const style = ([['top', 't'], ['right', 'r'], ['bottom', 'b'], ['left', 'l']] as const).map(([name, side]) => `border-${name}-style: ${sides.includes(side) ? 'solid' : 'none'};`).join('')
+    attrs.style = `${typeof attrs.style === 'string' ? attrs.style : ''}${style}`
+  },
+}
+
 const cellStyle = (prop: 'border-color' | 'background-color') => ({
   default: null,
   getFromDOM: (dom: HTMLElement) => safeColour(prop === 'border-color' ? dom.style.borderColor : dom.style.backgroundColor),
@@ -179,8 +211,14 @@ const styleMark = (attr: 'size' | 'color' | 'font', css: 'font-size' | 'color' |
   parseDOM: [{ style: css, getAttrs: (value: string | HTMLElement) => (check(value) ? { [attr]: check(value) } : false) }],
 })
 
-const tables = tableNodes({ tableGroup: 'block', cellContent: 'block+', cellAttributes: { borderColor: cellStyle('border-color'), background: cellStyle('background-color') } })
+const tables = tableNodes({ tableGroup: 'block', cellContent: 'block+', cellAttributes: { borders: cellBorders, borderColor: cellStyle('border-color'), background: cellStyle('background-color') } })
 // A row of a repeating block's table: drawn once before (header) or after (footer) the items, or per item (body).
+const table: NodeSpec = {
+  ...tables.table,
+  attrs: { layout: { default: 'grid' } },
+  toDOM: (node): DOMOutputSpec => ['table', safeLayout(node.attrs.layout) === 'layout' ? { 'data-layout': 'layout' } : {}, ['tbody', 0]],
+  parseDOM: [{ tag: 'table', getAttrs: (dom: HTMLElement | string) => ({ layout: safeLayout(elementOf(dom)?.getAttribute('data-layout')) }) }],
+}
 const table_row: NodeSpec = {
   ...tables.table_row,
   attrs: { zone: { default: 'body' } },
@@ -200,6 +238,7 @@ export const editorSchema = new Schema({
     repeat_footer: zone(REPEAT_FOOTER_CLASS),
     template_ref,
     ...tables,
+    table,
     table_row,
     text: { group: 'inline' },
     variable,

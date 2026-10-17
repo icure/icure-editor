@@ -7,7 +7,7 @@ import type { Mark, Node as ProseNode } from 'prosemirror-model'
 import { clampImageWidth, dataUriType } from '../images.ts'
 import { renderDocument } from '../render.ts'
 import type { Resolution } from '../resolve.ts'
-import { editorSchema, safeAlignment, safeColour, safeFont, safeSize } from '../schema.ts'
+import { cellSides, editorSchema, safeAlignment, safeColour, safeFont, safeSize } from '../schema.ts'
 
 const { nodes, marks } = editorSchema
 export const PX_TO_PT = 0.75
@@ -168,7 +168,8 @@ function tableOf(table: ProseNode, ctx: Ctx): PdfBlock | null {
       cell.forEach((child) => blocks.push(...blocksOf(child, inner)))
       const fill = safeColour(cell.attrs.background)
       const borderColor = safeColour(cell.attrs.borderColor)
-      cells.push({ blocks, colSpan, rowSpan: spanOf(cell.attrs.rowspan), ...(header ? { header: true } : {}), ...(fill ? { fill } : {}), ...(borderColor ? { borderColor } : {}) })
+      const borders = cellSides(table.attrs.layout, cell.attrs.borders)
+      cells.push({ blocks, colSpan, rowSpan: spanOf(cell.attrs.rowspan), ...(header ? { header: true } : {}), ...(fill ? { fill } : {}), ...(borderColor ? { borderColor } : {}), ...(borders ? { borders } : {}) })
     })
     if (leading && allHeaders) headerRows++
     else leading = false

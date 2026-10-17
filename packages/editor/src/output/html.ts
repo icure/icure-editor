@@ -83,6 +83,8 @@ export function htmlDocumentCss(page: PageFormat = A4_PAGE): string {
     '.ie-page p{margin:0;min-height:1em}',
     '.ie-page table{border-collapse:collapse;width:100%}',
     '.ie-page td,.ie-page th{border:1px solid #8a8f98;padding:2px 4px;vertical-align:top}',
+    // A layout table draws no rules but those a cell names (inline per-side styles, which win).
+    ".ie-page table[data-layout='layout'] td,.ie-page table[data-layout='layout'] th{border-style:none}",
     '.ie-page img{max-width:100%;height:auto;vertical-align:bottom}',
     `@media print{html,body{width:${width};background:none}.ie-page{margin:0;box-shadow:none}}`,
   ].join('')

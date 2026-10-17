@@ -56,14 +56,37 @@ function pushLastBlock(state: EditorState, box: PageBox): Transaction | null {
   return own(tr)
 }
 
+const px = (value: string): number => Number.parseFloat(value) || 0
+
+// A block's height with its margins (two margins that collapse are both counted: on the safe side).
+function outerHeight(dom: HTMLElement): number {
+  const style = getComputedStyle(dom)
+  return dom.offsetHeight + px(style.marginTop) + px(style.marginBottom)
+}
+
+// The free room at the bottom of a page's content box. The page's padding is the sheet's margin: an
+// overflow is measured against it (scrollHeight counts it), so it is no room for another block.
+function freeRoom(page: HTMLElement): number {
+  const style = getComputedStyle(page)
+  const bottom = page.clientHeight - px(style.paddingBottom)
+  const last = page.lastElementChild
+  if (!(last instanceof HTMLElement)) return bottom - px(style.paddingTop)
+  return bottom - (last.offsetTop - page.offsetTop + last.offsetHeight + px(getComputedStyle(last).marginBottom))
+}
+
+// A block is pulled back only when it fits with this much to spare, so a block that only just fits
+// (a rounding away from an overflow) is not pulled and pushed in turn.
+const PULL_SLACK_PX = 4
+
+// An image that hasn't loaded yet has no height: the block holding it can't be measured.
+const pendingImage = (dom: HTMLElement): boolean => [...dom.querySelectorAll('img')].some((img) => !img.complete)
+
 // The next page's first block fits in this page's free room: pull it back (and drop an emptied page).
 function pullFirstBlock(state: EditorState, box: PageBox, next: PageBox): Transaction | null {
   const first = next.node.firstChild
   const firstDom = next.dom.firstElementChild
-  if (!first || !(firstDom instanceof HTMLElement)) return null
-  const used = box.dom.lastElementChild instanceof HTMLElement ? box.dom.lastElementChild.offsetTop + box.dom.lastElementChild.offsetHeight - box.dom.offsetTop : 0
-  const room = box.dom.clientHeight - used
-  if (firstDom.offsetHeight >= room) return null
+  if (!first || !(firstDom instanceof HTMLElement) || pendingImage(firstDom)) return null
+  if (outerHeight(firstDom) + PULL_SLACK_PX > freeRoom(box.dom)) return null
   const tr = next.node.childCount === 1 ? state.tr.delete(next.pos, next.pos + next.node.nodeSize) : state.tr.delete(next.pos + 1, next.pos + 1 + first.nodeSize)
   tr.insert(box.pos + box.node.nodeSize - 1, first)
   return own(tr)
@@ -82,15 +105,41 @@ function reflowOnce(view: EditorView): Transaction | null {
   return null
 }
 
+// The views a reflow is moving blocks in: its own moves don't schedule another reflow (no
+// oscillation between two layouts).
+const reflowing = new WeakSet<EditorView>()
+
 // Nothing moves while a block is open in place: a move would take the block (and its editing area)
 // out of the document. The commit reflows.
 export function reflow(view: EditorView): void {
-  if (editingTarget(view.state)) return
-  for (let moves = 0; moves < MAX_MOVES; moves++) {
-    const tr = reflowOnce(view)
-    if (!tr) return
-    view.dispatch(tr)
+  if (editingTarget(view.state) || reflowing.has(view)) return
+  reflowing.add(view)
+  try {
+    for (let moves = 0; moves < MAX_MOVES; moves++) {
+      const tr = reflowOnce(view)
+      if (!tr) return
+      view.dispatch(tr)
+    }
+  } finally {
+    reflowing.delete(view)
   }
+}
+
+const scheduled = new WeakSet<EditorView>()
+const nextFrame = (run: () => void): void => {
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
+  else setTimeout(run, 0)
+}
+
+// A reflow at the next frame, however many times it is asked for meanwhile (every image of a page
+// that loads asks for one).
+export function scheduleReflow(view: EditorView): void {
+  if (scheduled.has(view)) return
+  scheduled.add(view)
+  nextFrame(() => {
+    scheduled.delete(view)
+    if (!view.isDestroyed) reflow(view)
+  })
 }
 
 // The reflow runs after the view has drawn the change (never inside its update).
@@ -98,23 +147,15 @@ export function paginationPlugin(): Plugin {
   return new Plugin({
     view: (view) => {
       let alive = true
-      // The reflow's own moves don't schedule another reflow (no oscillation between two layouts).
-      let reflowing = false
       const run = () => {
-        if (!alive || view.isDestroyed) return
-        reflowing = true
-        try {
-          reflow(view)
-        } finally {
-          reflowing = false
-        }
+        if (alive && !view.isDestroyed) reflow(view)
       }
       const schedule = () => queueMicrotask(run)
       schedule()
       return {
         update: (updated, previous) => {
           // A block closed without a change (Cancel) also reflows: what changed meanwhile didn't.
-          if (!reflowing && (!updated.state.doc.eq(previous.doc) || (editingTarget(previous) && !editingTarget(updated.state)))) schedule()
+          if (!reflowing.has(updated) && (!updated.state.doc.eq(previous.doc) || (editingTarget(previous) && !editingTarget(updated.state)))) schedule()
         },
         destroy: () => {
           alive = false

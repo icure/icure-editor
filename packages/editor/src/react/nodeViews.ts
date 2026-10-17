@@ -12,7 +12,7 @@ import { createSerializer } from '../output/html.ts'
 import { embedProblem, expression, renderBlocks, renderRepeatParts } from '../render.ts'
 import type { Resolution } from '../resolve.ts'
 import { EMBED_CLASS, FIELD_CLASS, IMAGE_CLASS, REPEAT_BODY_CLASS, REPEAT_CLASS, REPEAT_FOOTER_CLASS, REPEAT_HEADER_CLASS, type RowZone } from '../schema.ts'
-import { reflow } from '../pagination.ts'
+import { scheduleReflow } from '../pagination.ts'
 import type { EditingLevel, InlineSession } from './inlineEditing.ts'
 
 export interface ViewInputs {
@@ -159,8 +159,9 @@ function imageView(node: ProseNode, view: EditorView, { resolution }: ViewInputs
   dom.draggable = false
   const width = clampImageWidth(node.attrs.width)
   if (width) dom.width = width
-  // A loaded image changes the page's height: paginate again.
-  dom.addEventListener('load', () => queueMicrotask(() => !view.isDestroyed && reflow(view)), { once: true })
+  // A loaded image (or one that failed, drawn as its description) changes the page's height:
+  // paginate again (once a frame, however many load).
+  for (const event of ['load', 'error']) dom.addEventListener(event, () => scheduleReflow(view), { once: true })
   return { dom }
 }
 

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { canvas, focusEnd, L, open, toolbar } from './helpers.ts'
+import { canvas, clickInto, focusEnd, L, open, toolbar } from './helpers.ts'
 
 test.describe('typing and formatting', () => {
   test('types text and formats it from the toolbar and the keyboard', async ({ page }) => {
@@ -45,6 +45,34 @@ test.describe('typing and formatting', () => {
     await toolbar(page).getByRole('button', { name: L.tableMenu, exact: true }).click()
     await page.getByRole('menuitem', { name: L.table.addRow }).click()
     await expect(canvas(page).locator('table td')).toHaveCount(6)
+  })
+
+  test('sets the borders of a cell and the preset of a table from the Table menu', async ({ page }) => {
+    await open(page, 'blank')
+    await focusEnd(page)
+    await toolbar(page).getByRole('button', { name: L.insertTable }).click()
+    const first = canvas(page).locator('table td').first()
+    await clickInto(page, first)
+    const choose = async (name: string) => {
+      await toolbar(page).getByRole('button', { name: L.tableMenu, exact: true }).click()
+      await page.getByRole('menuitem', { name, exact: true }).click()
+    }
+    await choose(L.table.bordersBottom)
+    await expect(first).toHaveAttribute('data-borders', 'b')
+    await expect(first).toHaveCSS('border-bottom-style', 'solid')
+    await expect(first).toHaveCSS('border-top-style', 'none')
+    await expect(canvas(page).locator('table td').nth(1)).not.toHaveAttribute('data-borders')
+    await choose(L.table.bordersNone)
+    await expect(first).toHaveCSS('border-bottom-style', 'none')
+    await choose(L.table.bordersAll)
+    await expect(first).not.toHaveAttribute('data-borders')
+    await expect(first).toHaveCSS('border-top-style', 'solid')
+    await choose(L.table.layoutPlain)
+    await expect(canvas(page).locator('table')).toHaveAttribute('data-layout', 'layout')
+    await expect(first).toHaveCSS('border-top-style', 'dashed')
+    await choose(L.table.layoutGrid)
+    await expect(canvas(page).locator('table')).not.toHaveAttribute('data-layout')
+    await expect(first).toHaveCSS('border-top-style', 'solid')
   })
 
   test('moves an overflowing block to a new page', async ({ page }) => {

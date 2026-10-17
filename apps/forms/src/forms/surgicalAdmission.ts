@@ -2,21 +2,20 @@
 // admissions office and the surgeon, the patient, the reason, case and kind of stay (with the
 // flat-rate prices), the multi-resistant bacteria screening, the insurances; then the diagnosis, the
 // intervention, the equipment needed and the pre-operative examinations.
-import { BOX, blank, bold, box, br, cell, colour, doc, field, hAligned, image, options, p, row, size, small, STRONG, table, text, U, type Json } from '../build.ts'
+import { BOX, blank, bold, box, br, cell, colour, doc, field, hAligned, image, options, p, row, size, small, STRONG, layoutTable, text, U, type Json } from '../build.ts'
 import { LOGO_IMAGE_ID } from '../logo.ts'
 import type { Form } from './types.ts'
 
 const NAVY = colour('#0f3460')
 const LINK = colour('#1565c0')
 const GREY = colour('#a0a0a0')
-const NO_BORDER = '#ffffff'
 
 // The editor lays tables out in equal columns, so every layout row is a 12-column grid of
 // borderless cells, each spanning a share of it.
 // About six characters per grid column at the form's font size: a blank fills the rest of its cell.
 const CHARS_PER_COLUMN = 6
 type Slot = readonly [Json[], number]
-const grid = (...rows: readonly Slot[][]): Json => table(...rows.map((slots) => row(...slots.map(([content, span]) => cell(content, { colspan: span, border: NO_BORDER })))))
+const grid = (...rows: readonly Slot[][]): Json => layoutTable(...rows.map((slots) => row(...slots.map(([content, span]) => cell(content, { colspan: span })))))
 const fill = (label: string, span: number): Json => blank(Math.max(4, span * CHARS_PER_COLUMN - label.length - 4))
 // `Label : value` in a cell of `span` columns: a field, or a blank as long as the cell allows.
 const slot = (label: string, span: number, value: string | null = null): Slot => [[text(`${label} : `), value ? field(value) : fill(label, span)], span]

@@ -1,14 +1,13 @@
 // An operating-theatre admission slip (a private clinic's booking of an operation): the surgeon and
 // the anaesthesia consultation, then numbered sections (patient, stay, theatre, anaesthesia,
 // treatment, discharge, remarks, cancellation, date and signature), mostly in two or three columns.
-import { blank, bold, box, br, cell, colour, doc, EM, field, image, italic, line, options, p, pAligned, pLine, row, size, STRONG, table, text, type Json } from '../build.ts'
+import { blank, bold, box, br, cell, colour, doc, EM, field, image, italic, line, options, p, pAligned, pLine, row, size, STRONG, layoutTable, table, text, type Json } from '../build.ts'
 import { LOGO_IMAGE_ID } from '../logo.ts'
 import type { Form } from './types.ts'
 
 const NAVY = colour('#000080')
 const RED = colour('#ff0000')
 const GREY = colour('#808080')
-const NO_BORDER = '#ffffff'
 const BAND = '#b3b3b3'
 // The treatment grid is set smaller, as in the source, so its three columns hold their lines.
 const SMALL = size('11px')
@@ -18,7 +17,7 @@ const section = (num: string, title: string): Json => table(row(cell([p(text(`${
 // A grey bold italic sub-heading.
 const subHeading = (label: string): Json => p(text(label, STRONG, EM, GREY))
 // Side-by-side columns without rules.
-const columns = (...cols: (readonly [Json[], number])[]): Json => table(row(...cols.map(([blocks, width]) => cell(blocks, { border: NO_BORDER, width }))))
+const columns = (...cols: (readonly [Json[], number])[]): Json => layoutTable(row(...cols.map(([blocks, width]) => cell(blocks, { width }))))
 const ouiNon = (label: string, ...marks: Json[]): Json[] => [text(`${label} : `, SMALL, ...marks), box('oui', SMALL), text(' ', SMALL), box('non', SMALL)]
 
 // The title in small capitals: the initials larger, the rest in capitals.

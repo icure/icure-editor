@@ -1,11 +1,10 @@
 // A radiology examination request (a university hospital's diagnostic department): patient and
 // insurance on the left, the examination, clinical information and risks on the right, framed.
-import { blank, bold, cell, colour, doc, field, frame, h, image, line, options, p, pAligned, pLine, row, small, table, text, type Json } from '../build.ts'
+import { blank, bold, cell, colour, doc, field, frame, h, image, line, options, p, pAligned, pLine, row, small, layoutTable, text, type Json } from '../build.ts'
 import { LOGO_IMAGE_ID } from '../logo.ts'
 import type { Form } from './types.ts'
 
 const RED = colour('#d0021b')
-const NO_BORDER = '#ffffff'
 const yesNo = (label: string, yesRequiresDetail = false): Json => p(text(`${label} `), ...options(['OUI' + (yesRequiresDetail ? ' *' : '')], ...(yesRequiresDetail ? [RED] : [])), text('    '), ...options(['NON']))
 
 const patient: Json[] = [
@@ -59,7 +58,7 @@ export const radiologyRequest: Form = {
     p(image(LOGO_IMAGE_ID, 'Logo de l’Hôpital universitaire de Sampleville', 160)),
     p(text('Département diagnostique')),
     p(text('Service de radiologie / Service de neuroradiologie')),
-    table(row(cell(patient, { border: NO_BORDER }), cell(request, { border: NO_BORDER }))),
+    layoutTable(row(cell(patient), cell(request))),
     pAligned('center', small('Hôpital universitaire de Sampleville – Rue de l’Exemple 1 – 0000 Sampleville – radiologie@example.org')),
   ]),
 }

@@ -144,6 +144,36 @@ describe('PDF output', () => {
       expect(Buffer.from(bytes).subarray(0, 5).toString('latin1')).toBe('%PDF-')
     })
 
+    it('prints the sides of a cell, and no rule in a layout table but those named', async () => {
+      const cells = (type: 'ruled' | 'layout') => ({ type: 'table', ...(type === 'layout' ? { attrs: { layout: 'layout' } } : {}), content: [row(styled('table_cell', {}, paragraph(text('A'))), styled('table_cell', { borders: 'b' }, paragraph(text('B'))), styled('table_cell', { borders: 'x;background:url(y)' }, paragraph(text('C'))))] })
+      for (const kind of ['ruled', 'layout'] as const) {
+        const document = doc(page(cells(kind)))
+        const html = toHtml(document, await resolveDocument(document, fakeProvider({})))
+        const host = globalThis.document.createElement('div')
+        host.innerHTML = html
+        const printed = host.querySelector('td[data-borders]') as HTMLElement
+        expect([printed.style.borderTopStyle, printed.style.borderRightStyle, printed.style.borderBottomStyle, printed.style.borderLeftStyle]).toEqual(['none', 'none', 'solid', 'none'])
+        expect(host.querySelectorAll('td[data-borders]')).toHaveLength(1)
+        expect(html).not.toContain('url(')
+        const [plain, bottom, hostile] = bodyOf((await definitionOf(document)).content[0]).body[0]!
+        expect(bottom).toMatchObject({ border: [false, false, false, true] })
+        // [l, t, r, b]; the default is all four sides in a ruled table (nothing set), none in a layout one.
+        if (kind === 'ruled') {
+          expect(plain).not.toHaveProperty('border')
+          expect(hostile).not.toHaveProperty('border')
+        } else {
+          expect(plain).toMatchObject({ border: [false, false, false, false] })
+          expect(hostile).toMatchObject({ border: [false, false, false, false] })
+        }
+      }
+    })
+
+    it('never prints the editor outline of a layout table', () => {
+      const css = htmlDocumentCss()
+      expect(css).toContain("table[data-layout='layout'] td")
+      expect(css).not.toMatch(/dashed/)
+    })
+
     it('ignores a colour that is not a plain colour', async () => {
       const document = doc(page(table(row(styled('table_cell', { background: 'red; position: fixed', borderColor: 'url(x)' }, paragraph(text('X')))))))
       const cellNode = bodyOf((await definitionOf(document)).content[0]).body[0]![0]!

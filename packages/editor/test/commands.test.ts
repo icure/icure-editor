@@ -1,7 +1,7 @@
 import { EditorState, NodeSelection, TextSelection } from 'prosemirror-state'
 import { describe, expect, it } from 'vitest'
 
-import { insertField, repeatContent, insertImage, insertRepeat, insertTemplate, selectedImage, selectedKey, setAlignment, updateSelectedImage } from '../src/commands.ts'
+import { insertField, repeatContent, insertImage, insertRepeat, insertTemplate, selectedImage, selectedKey, setAlignment, setCellBorders, setTableLayout, updateSelectedImage } from '../src/commands.ts'
 import { doc, page, paragraph, text } from './helpers.ts'
 
 function stateAt(pos: number) {
@@ -13,6 +13,27 @@ const apply = (state: EditorState, command: (s: EditorState, d: (tr: import('pro
   command(state, (tr) => (next = state.apply(tr)))
   return next
 }
+
+describe('table commands', () => {
+  const tableState = () => {
+    const state = EditorState.create({ doc: doc(page({ type: 'table', content: [{ type: 'table_row', content: [{ type: 'table_cell', content: [paragraph(text('A'))] }, { type: 'table_cell', content: [paragraph(text('B'))] }] }] })) })
+    return state.apply(state.tr.setSelection(TextSelection.create(state.doc, 5)))
+  }
+
+  it('sets the sides of the cell at the cursor, and only that cell', () => {
+    const next = apply(tableState(), setCellBorders('b'))
+    const row = next.doc.child(0).child(0).child(0)
+    expect(row.child(0).attrs.borders).toBe('b')
+    expect(row.child(1).attrs.borders).toBe('tblr')
+    expect(apply(tableState(), setCellBorders('x;y')).doc.child(0).child(0).child(0).child(0).attrs.borders).toBe('tblr')
+  })
+
+  it('sets the preset of the table around the cursor, and does nothing outside a table', () => {
+    const next = apply(tableState(), setTableLayout('layout'))
+    expect(next.doc.child(0).child(0).attrs.layout).toBe('layout')
+    expect(setTableLayout('layout')(stateAt(2))).toBe(false)
+  })
+})
 
 describe('commands', () => {
   it('inserts a field at the cursor', () => {

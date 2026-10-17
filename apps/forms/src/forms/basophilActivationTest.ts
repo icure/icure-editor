@@ -1,7 +1,7 @@
 // A basophil activation test (BAT) request of an allergy laboratory: patient, sender and billing
 // framed at the top, the sample material, then drug allergy (drugs by class, each with its skin test
 // result), chronic urticaria and hymenoptera venom identification on the second page.
-import { blank, bold, BOX, box, cell, colour, doc, EM, field, image, line, options, p, pAligned, row, size, small, STRONG, table, text, U, type CellOptions, type Json } from '../build.ts'
+import { blank, bold, BOX, box, cell, colour, doc, EM, field, image, line, options, p, pAligned, row, size, small, STRONG, layoutTable, table, text, U, type CellOptions, type Json } from '../build.ts'
 import { LOGO_IMAGE_ID } from '../logo.ts'
 import type { Form } from './types.ts'
 
@@ -11,7 +11,6 @@ const EDTA = '#a1467e'
 const BLUE = colour('#3465a4')
 const RED = colour('#ff0000')
 const GREY = colour('#999999')
-const NO_BORDER = '#ffffff'
 const SMALL = size('10px')
 
 
@@ -21,7 +20,7 @@ const blueBold = (key: string): Json => field(key, STRONG, BLUE, SMALL)
 // A section title across the table, on the pink band.
 const band = (title: string, colspan: number): Json => row(cell([pAligned('center', bold(title, size('13px'))), pAligned('center', bold('BAT (Test d’activation des basophiles)', SMALL))], { colspan, background: PINK }))
 // An order code: its parts on their materials' colours, then the analysis with its box.
-const code = (codes: readonly (readonly [string, string])[], label: string): Json[] => [table(row(...codes.map(([c, bg]) => cell(small(c), { background: bg, border: NO_BORDER })))), p(box(label, SMALL))]
+const code = (codes: readonly (readonly [string, string])[], label: string): Json[] => [layoutTable(row(...codes.map(([c, bg]) => cell(small(c), { background: bg })))), p(box(label, SMALL))]
 const red = (value: string): Json => p(small(value, RED))
 
 const patient: Json[] = [
@@ -53,14 +52,14 @@ const billing: Json[] = [
   p(...line('Numéro AVS', field('patient.ssn', SMALL), SMALL)),
 ]
 
-const header = table(row(
-  cell([p(image(LOGO_IMAGE_ID, 'Logo du Laboratoire Alpha Analyses', 160))], { border: NO_BORDER }),
+const header = layoutTable(row(
+  cell([p(image(LOGO_IMAGE_ID, 'Logo du Laboratoire Alpha Analyses', 160))]),
   cell([
     pAligned('right', bold('Laboratoire Alpha Analyses', SMALL)),
     pAligned('right', small('Rue de l’Exemple 1, 0000 Sampleville')),
     pAligned('right', small('Tél. +00 00 000 00 00')),
     pAligned('right', small('info@example.org')),
-  ], { border: NO_BORDER }),
+  ]),
 ))
 
 const requestTable = table(
@@ -75,7 +74,7 @@ const requestTable = table(
     cell([p(small('Visa'), small('            '), small('Date de prélèvement'), small('            '), small('Heure de prélèvement')), p(blank(10), text('    '), blank(16), text('    '), blank(16))], { colspan: 2 }),
   ),
   row(cell([p(text('Copie du rapport')), p(box('Patient', SMALL)), p(box('Médecin/Autre', SMALL))], { colspan: 2 })),
-  row(cell([p()], { border: NO_BORDER }), cell([p()], { colspan: 2, border: NO_BORDER })),
+  row(cell([p()], { borders: '' }), cell([p()], { colspan: 2, borders: '' })),
   row(cell([p(text('S’il vous plaît, cocher correctement')), p(...options(['Correct', 'Faux'], SMALL))], { rowspan: 2 }), cell([p(text('Matériel'))], { colspan: 2 })),
   row(cell(small('Sérum'), { background: SERUM }), cell(small('Sang EDTA'), { background: EDTA })),
 )
@@ -98,7 +97,7 @@ const RIGHT_GROUPS: readonly DrugGroup[] = [
 // The vaccine components are ordered as one panel (one box), each with its own result.
 const VACCINE_PANEL = ['Moderna COV-19', 'PEG 2000', 'Pfizer COV-19', 'Polysorbat 80', 'TRIS']
 
-const plain: CellOptions = { border: NO_BORDER }
+const plain: CellOptions = { borders: '' }
 const groupTitle = (title: string): Json[] => [cell([p(bold(title, U, SMALL))], plain), cell([p(small('test cutané', U))], plain)]
 const result = (): Json => cell([p(...options(['pos', 'nég'], SMALL))], plain)
 const drugCells = (label: string, withBox = true): Json[] => [cell(withBox ? box(label, SMALL) : small(label), plain), result()]

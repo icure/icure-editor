@@ -10,11 +10,11 @@ import { addColumnAfter, addRowAfter, deleteColumn, deleteRow } from 'prosemirro
 import { EditorView } from 'prosemirror-view'
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react'
 
-import { insertImage, selectedImage, selectedKey, updateSelectedImage } from '../commands.ts'
+import { insertImage, selectedImage, selectedKey, setCellBorders, setTableLayout, updateSelectedImage } from '../commands.ts'
 import type { EditorDataProvider, FieldDescriptor, PickedImage, RepeatSourceDescriptor, TemplateSummary } from '../context.ts'
 import { toEditorDocument } from '../document.ts'
 import { checkImageFile, DEFAULT_MAX_IMAGE_BYTES, IMAGE_TYPES, type ImageFileError, type ImageType } from '../images.ts'
-import { mergeLabels, type PartialLabels } from '../labels.ts'
+import { mergeLabels, type PartialLabels, type TableAction } from '../labels.ts'
 import { A4_PAGE, PAGINATION_META, reflow, type PageFormat } from '../pagination.ts'
 import { expression } from '../render.ts'
 import { createResolver, DEFAULT_MAX_TEMPLATE_DEPTH, EMPTY_RESOLUTION, sameResolution, type Resolution } from '../resolve.ts'
@@ -75,7 +75,20 @@ export interface DocumentEditorProps {
 
 // The delay after the last edit before the document's references are resolved again.
 const RESOLVE_DELAY_MS = 120
-const TABLE_COMMANDS = { addRow: addRowAfter, addColumn: addColumnAfter, deleteRow, deleteColumn }
+const TABLE_COMMANDS: Readonly<Record<TableAction, Command>> = {
+  addRow: addRowAfter,
+  addColumn: addColumnAfter,
+  deleteRow,
+  deleteColumn,
+  layoutGrid: setTableLayout('grid'),
+  layoutPlain: setTableLayout('layout'),
+  bordersAll: setCellBorders('tblr'),
+  bordersNone: setCellBorders(''),
+  bordersTop: setCellBorders('t'),
+  bordersBottom: setCellBorders('b'),
+  bordersLeft: setCellBorders('l'),
+  bordersRight: setCellBorders('r'),
+}
 
 // A repeat source's descriptor, nested sources included.
 function findSource(sources: readonly RepeatSourceDescriptor[], key: string, depth = 0): RepeatSourceDescriptor | null {

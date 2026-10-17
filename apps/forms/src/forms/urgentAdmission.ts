@@ -12,7 +12,6 @@ const XS = size('8px')
 const RED = colour('#e30613')
 const TEAL = colour('#009c96')
 const GREY = colour('#808080')
-const NO_BORDER = '#ffffff'
 const FRAME_GREY = '#bfbfbf'
 const BAND = '#d9d9d9'
 const GAP = '    '
@@ -26,7 +25,7 @@ const sLine = (label: string, value: Json | string | number | null = null, ...ma
 // A section title (bold, a little larger than the text).
 const title = (value: string): Json => p(bold(value, size('13px')))
 // A cell without visible borders (layout only).
-const plain = (content: Json[] | Json | string, extra: CellOptions = {}): Json => cell(content, { border: NO_BORDER, ...extra })
+const plain = (content: Json[] | Json | string, extra: CellOptions = {}): Json => cell(content, { borders: '', ...extra })
 // A grey band with a centred bold title (the source's shaded section headers).
 const band = (title: string): Json => table(row(cell([pAligned('center', b(title))], { background: BAND, border: BAND })))
 
@@ -93,7 +92,7 @@ const laboratory: Json = table(
 const DOMAINS = ['Alimentation', 'Communication', 'Mobilité', 'Hygiène personnelle', 'Orientation/Espace', 'Orientation/Temps']
 const LEVELS = ['Aucune difficulté', 'Difficulté légère', 'Difficulté modérée', 'Difficulté grave']
 const autonomy: Json = table(
-  row(cell(p(), { border: NO_BORDER }), ...DOMAINS.map((domain) => cell(pAligned('center', text(domain, XS))))),
+  row(cell(p(), { borders: '' }), ...DOMAINS.map((domain) => cell(pAligned('center', text(domain, XS))))),
   row(cell(t('Patient'), { width: 90 }), ...DOMAINS.map(() => cell(LEVELS.map((level) => p(...options([level], XS)))))),
 )
 

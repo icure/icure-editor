@@ -9,11 +9,10 @@ const GREEN = colour('#3faa54')
 const GREY = colour('#808080')
 const FILL = '#cef1a9'
 const RULE = '#b2b2b2'
-const NO_BORDER = '#ffffff'
 
-const plain: CellOptions = { border: NO_BORDER }
-const filled: CellOptions = { border: NO_BORDER, background: FILL }
-const spacer = (): Json => cell(p(), { border: NO_BORDER, width: 8 })
+const plain: CellOptions = { borders: '' }
+const filled: CellOptions = { borders: '', background: FILL }
+const spacer = (): Json => cell(p(), { borders: '', width: 8 })
 // A right-aligned label.
 const labelCell = (label: string, ...marks: Json[]): Json => cell(pAligned('right', text(label, ...marks)), plain)
 // A value to fill: a field, several fields, or nothing (by hand), on a green background.

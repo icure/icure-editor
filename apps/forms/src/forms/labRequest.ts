@@ -10,9 +10,8 @@ const DARK_GREEN = colour('#1e6a39')
 const RED_LINE = '#e8423f'
 const RED = colour('#e8423f')
 const WHITE = colour('#ffffff')
-const NO_BORDER = '#ffffff'
 const T = size('6.5pt')
-const plain: CellOptions = { border: NO_BORDER }
+const plain: CellOptions = { borders: '' }
 
 // The sampling materials: number, description, tube colour (null: none).
 const LEGEND: readonly (readonly [number, string, string | null])[] = [

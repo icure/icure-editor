@@ -1,13 +1,12 @@
 // A medical imaging examination slip (an imaging centre): appointment bars under the title, the
 // patient's and the referring physician's data framed side by side, the RX / US / CT / IRM matrix by
 // body region next to the left / right osteo-articular table, the indications box, the risks.
-import { BOX, blank, bold, cell, colour, doc, field, frame, image, line, p, pAligned, row, size, small, table, text, type Json } from '../build.ts'
+import { BOX, blank, bold, cell, colour, doc, field, frame, image, line, p, pAligned, row, size, small, layoutTable, table, text, type Json } from '../build.ts'
 import { LOGO_IMAGE_ID } from '../logo.ts'
 import type { Form } from './types.ts'
 
 const SHADE = '#dde2f5'
 const NAVY = colour('#1f3f8f')
-const NO_BORDER = '#ffffff'
 const BIG = size('20px')
 const TITLE = size('24px')
 
@@ -60,12 +59,12 @@ const osteo = table(
   ...OSTEO.flatMap((modality) => [row(cell([bold(`${modality} :`)], { colspan: 5 }), cell(pAligned('center', text(`${BOX}  ${BOX}`)))), row(cell([], { colspan: 5, background: SHADE }), cell([], { background: SHADE }))]),
 )
 
-const bar = (label: string, ...extra: Json[]): Json => table(row(cell([p(text(`${label} : `), blank(16), ...extra)], { background: SHADE, border: NO_BORDER })))
+const bar = (label: string, ...extra: Json[]): Json => layoutTable(row(cell([p(text(`${label} : `), blank(16), ...extra)], { background: SHADE })))
 
-const header = table(
+const header = layoutTable(
   row(
-    cell([p(image(LOGO_IMAGE_ID, 'Logo du Centre d’imagerie du Verger', 180)), p(small('Centre d’imagerie du Verger', NAVY))], { colspan: 2, border: NO_BORDER }),
-    cell([p(text('Bon d’examen d’imagerie médicale', TITLE)), bar('Rendez-vous', text(' '), bold('Tél. +00 00 000 00 00')), bar('Date souhaitée')], { colspan: 3, border: NO_BORDER }),
+    cell([p(image(LOGO_IMAGE_ID, 'Logo du Centre d’imagerie du Verger', 180)), p(small('Centre d’imagerie du Verger', NAVY))], { colspan: 2 }),
+    cell([p(text('Bon d’examen d’imagerie médicale', TITLE)), bar('Rendez-vous', text(' '), bold('Tél. +00 00 000 00 00')), bar('Date souhaitée')], { colspan: 3 }),
   ),
 )
 
@@ -90,12 +89,12 @@ const referent = frame([
 ])
 
 // Two blocks side by side, without the outer table's own borders.
-const sideBySide = (left: Json, right: Json): Json => table(row(cell([left], { border: NO_BORDER }), cell([right], { border: NO_BORDER })))
+const sideBySide = (left: Json, right: Json): Json => layoutTable(row(cell([left]), cell([right])))
 
 const indications = frame([p(text('Indications et antécédents : ', BIG), blank(45)), ...Array.from({ length: 11 }, () => p(blank(92)))])
 
 const RISKS = ['Allergie(s)', 'Créatininémie', 'Anticoagulants', 'PCMK ou implants', 'Autre'] as const
-const risks = frame([table(...RISKS.map((risk) => row(cell(`${risk} :`, { colspan: 3, border: NO_BORDER }), cell(BOX, { border: NO_BORDER }), cell([blank(52)], { colspan: 10, border: NO_BORDER }))))])
+const risks = frame([layoutTable(...RISKS.map((risk) => row(cell(`${risk} :`, { colspan: 3 }), cell(BOX), cell([blank(52)], { colspan: 10 }))))])
 
 export const imagingRequest: Form = {
   id: 'imaging-request',

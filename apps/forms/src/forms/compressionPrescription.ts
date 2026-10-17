@@ -6,7 +6,6 @@ import { LOGO_IMAGE_ID } from '../logo.ts'
 import type { Form } from './types.ts'
 
 const BLUE = colour('#133e8f')
-const NO_BORDER = '#ffffff'
 const RULE = '#133e8f'
 
 // The source prints small (an A5 pad): every run outside a heading and without a size of its own gets one.
@@ -21,7 +20,7 @@ const sized = (node: Json, value = '11px'): Json => {
 const logo = pAligned('right', image(LOGO_IMAGE_ID, 'Logo de VENOFORM', 100))
 const label = (value: string): Json => bold(value, BLUE)
 // A label on the left, the rest of the line on the right (no frame).
-const labelled = (name: string, ...content: Json[][]): Json => row(cell(label(name), { border: NO_BORDER, width: 90 }), ...content.map((c) => cell(c, { border: NO_BORDER })))
+const labelled = (name: string, ...content: Json[][]): Json => row(cell(label(name), { borders: '', width: 90 }), ...content.map((c) => cell(c, { borders: '' })))
 // A value over its small caption.
 const captioned = (value: Json, caption: string): Json[] => [p(value), p(small(caption))]
 
@@ -37,16 +36,16 @@ const MODELS: readonly (readonly [string, string])[] = [
 const CLASSES = ['CCL 1', 'CCL 2', 'CCL 3', 'CCL 4']
 
 const modelGrid = table(
-  row(...MODELS.map(([name]) => cell(p(box(name)), { border: NO_BORDER }))),
-  row(...MODELS.map(([, code]) => cell(p(bold(code, BLUE)), { border: NO_BORDER }))),
-  ...CLASSES.map((ccl) => row(...MODELS.map(() => cell(p(box(ccl, STRONG)), { border: NO_BORDER })))),
-  row(cell(p(...line('Nombre paire(s)', blank(10))), { colspan: 2, border: NO_BORDER }), cell(p(...line('Nombre de pièce(s)', blank(10))), { colspan: 3, border: NO_BORDER })),
+  row(...MODELS.map(([name]) => cell(p(box(name)), { borders: '' }))),
+  row(...MODELS.map(([, code]) => cell(p(bold(code, BLUE)), { borders: '' }))),
+  ...CLASSES.map((ccl) => row(...MODELS.map(() => cell(p(box(ccl, STRONG)), { borders: '' })))),
+  row(cell(p(...line('Nombre paire(s)', blank(10))), { colspan: 2, borders: '' }), cell(p(...line('Nombre de pièce(s)', blank(10))), { colspan: 3, borders: '' })),
 )
 
 const motif = (reason: string): Json => p(small('    ○ '), small('Motif :', STRONG), small(` ${reason}`))
 const aids = table(
   row(
-    cell([p(box('Kit ulcère veineux')), p(...line('Nombre de kits', blank(10)))], { border: NO_BORDER }),
+    cell([p(box('Kit ulcère veineux')), p(...line('Nombre de kits', blank(10)))], { borders: '' }),
     cell([
       p(bold('DISPOSITIFS D’AIDE À LA MISE EN PLACE', BLUE)),
       p(box('Gants en caoutchouc spéciaux', STRONG, BLUE)),
@@ -54,14 +53,14 @@ const aids = table(
       motif('le / la patient(e) n’est pas en mesure de mettre ou d’enlever ses bas de compression seul(e).'),
       p(box('Cadre / manchette circulaire', STRONG, BLUE)),
       motif('le / la patient(e) ne peut pas utiliser l’aide au glissement en raison d’une mobilité réduite.'),
-    ], { border: NO_BORDER, colspan: 2 }),
+    ], { borders: '', colspan: 2 }),
   ),
 )
 
 const signature = table(
   row(
     cell([p(small('Sceau du cabinet / Adresse du médecin')), p(field('physician.practice')), p(field('physician.street'), text(', '), field('physician.postalCode'), text(' '), field('physician.city'))], { border: RULE, width: 230 }),
-    cell([p(small('Nom du médecin / Numéro RCC : '), field('physician.title'), text(' '), field('physician.firstName'), text(' '), field('physician.lastName'), text(' / '), field('physician.rcc')), p(small('Date : '), field('date.today')), p(small('Signature du médecin : '), blank(20))], { border: NO_BORDER }),
+    cell([p(small('Nom du médecin / Numéro RCC : '), field('physician.title'), text(' '), field('physician.firstName'), text(' '), field('physician.lastName'), text(' / '), field('physician.rcc')), p(small('Date : '), field('date.today')), p(small('Signature du médecin : '), blank(20))], { borders: '' }),
   ),
 )
 
@@ -71,8 +70,8 @@ const prescription: Json[] = [
   p(bold('Bas / Collants de compression médicaux à maillage circulaire', BLUE)),
   table(
     labelled('Patient(e)', captioned(field('patient.lastName'), 'Nom'), captioned(field('patient.firstName'), 'Prénom'), captioned(field('patient.birthDate'), 'Date de naissance')),
-    row(cell(label('Indication'), { border: NO_BORDER }), cell(p(blank(40)), { colspan: 3, border: NO_BORDER })),
-    row(cell(label('Utilisation'), { border: NO_BORDER }), cell(p(...options(['Bas standard / en série', 'Bas sur mesure'])), { colspan: 3, border: NO_BORDER })),
+    row(cell(label('Indication'), { borders: '' }), cell(p(blank(40)), { colspan: 3, borders: '' })),
+    row(cell(label('Utilisation'), { borders: '' }), cell(p(...options(['Bas standard / en série', 'Bas sur mesure'])), { colspan: 3, borders: '' })),
   ),
   p(label('Modèle')),
   modelGrid,
@@ -103,14 +102,14 @@ const measures = table(
         row(cell(p(), { header: true }), cell(p(small('Jambe gauche')), { header: true }), cell(p(small('Jambe droite')), { header: true })),
         ...CIRCUMFERENCES.map((point) => row(cell(p(text(point, BLUE))), cell(p()), cell(p()))),
       ),
-    ], { border: NO_BORDER }),
+    ], { borders: '' }),
     cell([
       p(bold('MESURES LONGUEUR', BLUE)),
       table(
         row(cell(p(), { header: true }), cell(p(small('Longueur')), { header: true })),
         ...LENGTHS.map((point) => row(cell(p(text(point, BLUE))), cell(p()))),
       ),
-    ], { border: NO_BORDER, width: 150 }),
+    ], { borders: '', width: 150 }),
   ),
 )
 
@@ -120,8 +119,8 @@ const sheet: Json[] = [
   p(bold('IMPORTANT :', BLUE), text(' Vous pouvez trouver le bas de compression de VENOFORM dans votre logiciel sous le nom VF = VenoForm.', BLUE)),
   table(
     labelled('Patient(e)', captioned(field('patient.lastName'), 'Nom'), captioned(field('patient.firstName'), 'Prénom')),
-    row(cell(label('Date de mesures'), { border: NO_BORDER }), cell(p(blank(40)), { colspan: 2, border: NO_BORDER })),
-    row(cell(label('Notes'), { border: NO_BORDER }), cell(p(blank(40)), { colspan: 2, border: NO_BORDER })),
+    row(cell(label('Date de mesures'), { borders: '' }), cell(p(blank(40)), { colspan: 2, borders: '' })),
+    row(cell(label('Notes'), { borders: '' }), cell(p(blank(40)), { colspan: 2, borders: '' })),
   ),
   p(label('Produit')),
   table(

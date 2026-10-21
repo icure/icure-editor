@@ -100,6 +100,18 @@ describe('the schema as the only parser of pasted HTML', () => {
     expect(safeFont('Comic Sans')).toBeNull()
   })
 
+  it('round-trips a field, a block and an embed whose names hold a selection through copy and paste', () => {
+    const name = `person.contacts[kind=="home"].phone`
+    const source = `orders[status=='open']`
+    const doc = toEditorDocument(docJson(page(paragraph({ type: 'variable', attrs: { name, label: null } }), { type: 'template_ref', attrs: { templateId: 'letters[lang==fr]' } })))
+    const host = document.createElement('div')
+    host.append(DOMSerializer.fromSchema(editorSchema).serializeFragment(doc.content))
+    const back = ProseParser.fromSchema(editorSchema).parse(host)
+    expect(back.child(0).child(0).child(0).attrs.name).toBe(name)
+    expect(back.child(0).child(1).attrs.templateId).toBe('letters[lang==fr]')
+    expect(parse(`<div class="ie-page"><div class="ie-repeat" data-source="${source}"><div class="ie-repeat-body"><p>x</p></div></div></div>`).child(0).child(0).attrs.source).toBe(source)
+  })
+
   it('refuses a field, block or embed reference with markup in its name', () => {
     const node = parse('<div class="ie-page"><p><span class="ie-field" data-field="a&quot;><b>x"></span><span class="ie-field" data-field="person.name"></span></p><div class="ie-embed" data-template="<x>"></div></div>')
     expect(node.toJSON()).toEqual({ type: 'doc', content: [{ type: 'page', attrs: { id: 0 }, content: [{ type: 'paragraph', attrs: { align: 'inherit' }, content: [{ type: 'variable', attrs: { name: 'person.name', label: null } }] }] }] })

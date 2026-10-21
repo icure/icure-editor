@@ -224,7 +224,9 @@ into an editing area showing its template, fields as placeholders (`{event.title
   node; every style value (colour, size, font, alignment, a cell's `borders`, a table's `layout`)
   is checked against a closed pattern;
   in pasted HTML, reference names (fields, sources, template ids, image ids) must match a bounded
-  identifier pattern.
+  identifier pattern: letters, digits and `_ . : @ / - [ ] = ' "` — enough for a host to name a
+  selection (`person.contacts[kind==home].phone`), never `<`, `>`, `&`, a space or a control
+  character. The library does not read a name; the host's provider does.
 - **Nothing is evaluated.** A field is looked up by key; its value is inserted as a text node, never
   as HTML, in the editor and in both outputs.
 - **Images are references, not URLs.** The schema neither reads nor writes `src`: an

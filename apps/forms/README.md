@@ -18,20 +18,25 @@ bun run --filter @icure/editor-forms dev        # http://localhost:5180
 bun run --filter @icure/editor-forms test:e2e   # builds the library, then Playwright (also run by the root test:e2e)
 ```
 
+## The forms' content is not in the repository
+
+Each form is a document in ProseMirror's JSON (`Node.toJSON()`, a `doc` of `page`s), one file per
+form: `data/<id>.json`. The `data/` folder is gitignored; get it from a teammate and put it in
+`apps/forms/data/`. To save a form you changed in the editor, write `getDocument().toJSON()` to its
+file.
+
+Without the folder, the app says so and lists nothing, the demo has no form groups, and the tests of
+the missing forms skip.
+
 ## Layout
 
-- `src/build.ts`: JSON builders, and the form idioms built on them:
-  - `line` / `pLine`: `Label : field-or-blank`;
-  - `box` / `options`: option boxes;
-  - `blank`: a line to fill by hand;
-  - `frame`: a framed section (a one-cell table);
-  - `layoutTable`: a table that only lays blocks out (no rules but the sides a cell names);
-  - `cell(…, { colspan, rowspan, background, border, borders })`: `borders` is the sides drawn, a
-    subset of `tblr` (`''` none; in a layout table, none unless named).
+- `src/forms/catalogue.ts`: the forms in list order: id (the file name), title, source document and
+  page format (A4, A5, A4 landscape, or narrower margins).
+- `src/forms/index.ts` (browser, Vite `import.meta.glob`) and `src/forms/node.ts` (Node, for the
+  Playwright specs): the catalogue with the content found in `data/`. The package export
+  `@icure/editor-forms/forms` picks one by the `node` condition.
 - `src/provider.ts`: the field catalogue (patient, insurance, physician, entourage, date) with
   fictitious values. Clinical data stays blank, to be filled by hand.
-- `src/forms/*.ts`: one file per form. Each form has its own page format (`page`): A4, A5, A4
-  landscape, or narrower margins.
 - `e2e/forms.spec.ts`: for every form, it checks:
   - the form fits the schema;
   - every field it uses has a value;
@@ -56,7 +61,7 @@ bun run --filter @icure/editor-forms test:e2e   # builds the library, then Playw
 | Fields that tick an option (`patient.sex` → ☒ F) | hand-ticked options | admission forms |
 | Spacing control (paragraph spacing, line height) | smaller sizes and empty paragraphs | dense forms |
 
-Done since the first version: cell borders and layout tables (`borders`, `layoutTable`, in place of
+Done since the first version: cell borders and layout tables (the `borders` cell attribute and `layout: 'layout'` tables, in place of
 white borders), rich table cells in the PDF (marks, colours, spans, nested tables, images,
 headings), and every sheet the editor has (landscape included) in the PDF.
 

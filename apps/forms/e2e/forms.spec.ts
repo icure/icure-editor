@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path'
 import { A4_PAGE, DEFAULT_LABELS, editorSchema, pdfPageOf, preparePdfmake, renderPdf, resolveDocument, toEditorDocument, toPdfContent, toPdfDefinition, type PdfmakeInstance } from '@icure/editor'
 import { expect, test, type Page } from '@playwright/test'
 
-import { FORMS } from '../src/forms/index.ts'
+import { FORMS } from '../src/forms/node.ts'
 import { APP, EDITOR_LABELS } from '../src/labels.ts'
 import { createFormsProvider, FIELD_VALUES } from '../src/provider.ts'
 
@@ -52,8 +52,19 @@ const runsOf = (node: unknown): { text?: unknown; bold?: boolean }[] => {
   return [...(typeof n.text === 'string' ? [n as { text: string; bold?: boolean }] : []), ...runsOf(n.text), ...runsOf(n.stack), ...runsOf(n.table?.body)]
 }
 
+// The forms' content is not in the repository: the tests of a form whose file is missing skip.
+const radiology = FORMS.find((f) => f.id === 'radiology-request')
+const MISSING = 'the form’s content (data/*.json) is missing'
+
+test('without any form, the app says where their content goes', async ({ page }) => {
+  test.skip(FORMS.length > 0, 'the forms are present')
+  await page.goto('/')
+  await expect(page.getByText(APP.noForms)).toBeVisible()
+})
+
 test('the PDF of the radiology request holds the heading of its frame as a bold run', async () => {
-  const form = FORMS.find((f) => f.id === 'radiology-request')!
+  test.skip(!radiology, MISSING)
+  const form = radiology!
   const doc = toEditorDocument(form.content)
   const content = toPdfContent(doc, await resolveDocument(doc, createFormsProvider(), { rootId: form.id }), { title: form.title })
   const runs = runsOf(toPdfDefinition(content).content)
@@ -87,7 +98,8 @@ function nodePdfmake(): PdfmakeInstance {
 // The sheets each form, as written (before the editor paginates it), prints on.
 const SHEETS: Readonly<Record<string, number>> = { 'radiology-request': 1, 'imaging-request': 1, 'hip-prosthesis-order': 1, 'compression-prescription': 2 }
 for (const [id, sheets] of Object.entries(SHEETS)) {
-  const form = FORMS.find((f) => f.id === id)!
+  const form = FORMS.find((f) => f.id === id)
+  if (!form) continue
   test(`the PDF of ${form.title}, as written, prints on ${sheets} sheet(s)`, async () => {
     const doc = toEditorDocument(form.content)
     const content = toPdfContent(doc, await resolveDocument(doc, createFormsProvider(), { rootId: form.id }), { title: form.title, ...pdfPageOf(form.page ?? A4_PAGE) })
@@ -102,6 +114,7 @@ for (const [id, sheets] of Object.entries(SHEETS)) {
 }
 
 test('the PDF of the radiology request is a landscape A4 sheet', async ({ page }) => {
+  test.skip(!radiology, MISSING)
   const pdf = await downloadedPdf(page, 'radiology-request')
   const box = /\/MediaBox\s*\[\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\]/.exec(pdf)!.slice(1).map(Number)
   expect(box[2]! - box[0]!).toBeCloseTo(841.89, 0)

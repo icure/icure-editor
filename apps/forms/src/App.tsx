@@ -8,9 +8,25 @@ import { APP, EDITOR_LABELS } from './labels.ts'
 import { documentPdf } from './pdf.ts'
 import { createFormsProvider, FORMS_DAY } from './provider.ts'
 
-const currentId = (): string => new URLSearchParams(window.location.search).get('form') ?? FORMS[0]!.id
+const currentId = (): string => new URLSearchParams(window.location.search).get('form') ?? FORMS[0]?.id ?? ''
 
 export function App() {
+  // The forms' content is not in the repository (see the README): without it, nothing to show.
+  if (FORMS.length === 0)
+    return (
+      <div className="forms">
+        <header className="forms-header">
+          <div>
+            <h1>{APP.title}</h1>
+            <p className="forms-subtitle">{APP.noForms}</p>
+          </div>
+        </header>
+      </div>
+    )
+  return <Forms />
+}
+
+function Forms() {
   const [id, setId] = useState(currentId)
   useEffect(() => {
     const onPop = () => setId(currentId())

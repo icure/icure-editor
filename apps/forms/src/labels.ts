@@ -87,6 +87,7 @@ export const APP = {
   title: '@icure/editor : formulaires',
   subtitle: 'Formulaires médicaux reproduits avec des données fictives',
   forms: 'Formulaires',
+  noForms: 'Aucun formulaire : leur contenu (apps/forms/data/*.json) n’est pas dans le dépôt.',
   source: 'Document reproduit',
   preview: 'Aperçu HTML',
   previewTitle: 'Aperçu HTML du formulaire rempli',

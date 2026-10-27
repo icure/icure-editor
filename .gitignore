@@ -6,3 +6,6 @@ playwright-report/
 *.tsbuildinfo
 .DS_Store
 .vite/
+
+# The forms example's content (ProseMirror JSON), kept out of the repository
+apps/forms/data/

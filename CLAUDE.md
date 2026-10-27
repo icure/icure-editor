@@ -26,7 +26,9 @@ from `apps/forms`. Sample data is fictitious.
   (grouped in the template list; the last groups are the forms of `apps/forms`), `src/labels/`
   (en, fr, nl), `e2e/` (Playwright).
 - `apps/forms`: ten real-world medical forms rebuilt as templates (fictitious data, French), with
-  their own app on :5180; the demo imports them (`@icure/editor-forms/forms`, `/provider`).
+  their own app on :5180; the demo imports them (`@icure/editor-forms/forms`, `/provider`). Their
+  content is ProseMirror JSON in `apps/forms/data/<id>.json`, gitignored and never committed; the
+  apps and tests run without it (no forms, their tests skip).
 
 ## Commands
 

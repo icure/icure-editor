@@ -17,12 +17,14 @@ test.describe('template list', () => {
       await expect(group(page, APP.templateGroups[name]).locator('a')).toHaveCount(members.length)
     }
     await expect(group(page, APP.templateGroups.documents)).toHaveAttribute('open', '')
-    await expect(group(page, APP.templateGroups.imaging)).not.toHaveAttribute('open', '')
+    await expect(group(page, APP.templateGroups.blocks)).not.toHaveAttribute('open', '')
     expect(SAMPLE_TEMPLATES.filter((t) => FORMS.some((f) => f.id === t.id))).toHaveLength(FORMS.length)
   })
 
   test('opens a medical form from its group, filled', async ({ page }) => {
-    const form = FORMS.find((f) => f.id === 'radiology-request')!
+    const radiology = FORMS.find((f) => f.id === 'radiology-request')
+    test.skip(!radiology, 'the forms’ content (apps/forms/data) is missing')
+    const form = radiology!
     await open(page, 'welcome-letter')
     const imaging = group(page, APP.templateGroups.imaging)
     await imaging.locator('summary').click()

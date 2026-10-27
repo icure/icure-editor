@@ -106,6 +106,8 @@ export function App() {
           {/* One collapsible group per kind of template; the current template's group starts open. */}
           {TEMPLATE_GROUPS.map((group) => {
             const members = SAMPLE_TEMPLATES.filter((t) => t.group === group)
+            // The forms' groups are empty when their content (apps/forms/data) is missing.
+            if (members.length === 0) return null
             return (
               <details key={group} className="demo-group" open={group === template.group || undefined}>
                 <summary>{strings.templateGroups[group]}</summary>

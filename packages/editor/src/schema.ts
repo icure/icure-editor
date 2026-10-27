@@ -31,8 +31,10 @@ export const safeRowZone = (value: unknown): RowZone => ROW_ZONES.find((zone) =>
 export const EMBED_CLASS = 'ie-embed'
 export const IMAGE_CLASS = 'ie-image'
 
-// A template id, a field name or a repeat source: printable, bounded, no markup.
-const IDENTIFIER = /^[\p{L}\p{N}_.:@/-]{1,200}$/u
+// A template id, a field name or a repeat source: printable, bounded, no markup. Brackets, `=` and
+// quotes let a host name a selection (`person.contacts[kind==home].phone`); the library never reads
+// them, the provider does. `<`, `>`, `&`, spaces and control characters stay out.
+const IDENTIFIER = /^[\p{L}\p{N}_.:@/\-[\]='"]{1,200}$/u
 export const safeIdentifier = (value: unknown): string | null => (typeof value === 'string' && IDENTIFIER.test(value) ? value : null)
 
 const COLOUR = /^(#[0-9a-f]{3,8}|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+)\s*)?\))$/i

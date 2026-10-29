@@ -89,7 +89,7 @@ export { documentFileName, downloadBytes, fileDay, HTML_TYPE, PDF_TYPE, printPdf
 
 // React components.
 export { DocumentEditor, type DocumentEditorHandle, type DocumentEditorProps } from './react/DocumentEditor.tsx'
-export { Toolbar, type ToolbarProps } from './react/Toolbar.tsx'
+export { ToolButton, Toolbar, TOOLBAR_ITEM_IDS, type CustomizeToolbar, type ToolbarContext, type ToolbarItem, type ToolbarItemId, type ToolbarProps, type ToolButtonProps } from './react/Toolbar.tsx'
 export { Menu, type MenuItem } from './react/Menu.tsx'
 export { UnresolvedChip, type UnresolvedChipProps } from './react/UnresolvedChip.tsx'
 export { ImagePanel, type ImagePanelProps } from './react/ImagePanel.tsx'

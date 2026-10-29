@@ -21,7 +21,7 @@ import { createResolver, DEFAULT_MAX_TEMPLATE_DEPTH, EMPTY_RESOLUTION, sameResol
 import { ImagePanel } from './ImagePanel.tsx'
 import { EditingLevel, editorPlugins, type EditingHost, type InlineSession } from './inlineEditing.ts'
 import { nodeViews } from './nodeViews.ts'
-import { Toolbar } from './Toolbar.tsx'
+import { Toolbar, type CustomizeToolbar } from './Toolbar.tsx'
 import { UnresolvedChip } from './UnresolvedChip.tsx'
 
 
@@ -68,6 +68,9 @@ export interface DocumentEditorProps {
   // The user's own edits only (what a draft saves), not the pagination's reflows.
   readonly onEdit?: (doc: ProseNode) => void
   readonly onResolution?: (resolution: Resolution) => void
+  // The host's hook on the toolbar: removes, reorders, wraps or adds items (see CustomizeToolbar).
+  readonly customizeToolbar?: CustomizeToolbar
+  // Extra controls appended after the toolbar's items.
   readonly toolbarExtras?: ReactNode
   readonly className?: string
   readonly ref?: Ref<DocumentEditorHandle>
@@ -167,7 +170,7 @@ function useResolution(provider: EditorDataProvider, options: { rootId: string |
 }
 
 export function DocumentEditor(props: DocumentEditorProps) {
-  const { initial, provider, readOnly = false, page = A4_PAGE, documentId, maxTemplateDepth = DEFAULT_MAX_TEMPLATE_DEPTH, showUnresolved = true, toolbarExtras, className, ref } = props
+  const { initial, provider, readOnly = false, page = A4_PAGE, documentId, maxTemplateDepth = DEFAULT_MAX_TEMPLATE_DEPTH, showUnresolved = true, customizeToolbar, toolbarExtras, className, ref } = props
   const labels = useMemo(() => mergeLabels(props.labels), [props.labels])
   const imageRules = useMemo(() => ({ maxBytes: props.images?.maxBytes ?? DEFAULT_MAX_IMAGE_BYTES, types: props.images?.types ?? IMAGE_TYPES }), [props.images?.maxBytes, props.images?.types])
   const host = useRef<HTMLDivElement>(null)
@@ -384,7 +387,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
   return (
     <div className={['ie-editor', className].filter(Boolean).join(' ')} style={pageStyle}>
       {!readOnly && activeState && (
-        <Toolbar state={activeState} run={run} labels={labels} fields={fields} repeatSources={offers.repeatSources} templates={templates} onInsertImage={onInsertImage} tableCommands={TABLE_COMMANDS} undo={undo} redo={redo}>
+        <Toolbar state={activeState} run={run} labels={labels} fields={fields} repeatSources={offers.repeatSources} templates={templates} onInsertImage={onInsertImage} tableCommands={TABLE_COMMANDS} undo={undo} redo={redo} customize={customizeToolbar}>
           {toolbarExtras}
         </Toolbar>
       )}

@@ -1,12 +1,15 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { TextSelection } from 'prosemirror-state'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { EditorDataProvider } from '../src/context.ts'
+import { toggleStrong } from '../src/commands.ts'
 import { DocumentEditor, type DocumentEditorHandle } from '../src/react/DocumentEditor.tsx'
+import { ToolButton, type CustomizeToolbar, type ToolbarContext } from '../src/react/Toolbar.tsx'
 import { DEFAULT_LABELS } from '../src/labels.ts'
 import { docJson, embed, field, page, paragraph, PNG_DATA_URI, repeat, text, zoned } from './helpers.ts'
+import { isMarkActive } from '../src/commands.ts'
 import { createRef } from 'react'
 
 const PNG_BYTES = Uint8Array.from(atob(PNG_DATA_URI.split(',')[1]!), (c) => c.charCodeAt(0))
@@ -197,5 +200,56 @@ describe('the Table menu', () => {
 
   it('shows a cell that draws some sides', async () => {
     expect((await menuAt('Plain top')).checked).toEqual([L.table.layoutPlain, L.table.bordersTop])
+  })
+})
+
+describe('the toolbar hook', () => {
+  const toolbar = () => screen.getByRole('toolbar', { name: 'Formatting' })
+  // The toolbar's controls by accessible name, in order (the alignment group's buttons included).
+  const controls = () => [...toolbar().querySelectorAll('button, select')].map((control) => control.getAttribute('aria-label'))
+
+  it('receives the built-in items in their default order, an unavailable menu left out', async () => {
+    const seen: string[][] = []
+    render(<DocumentEditor initial={docJson(page(paragraph(text('Hello'))))} provider={provider({ listTemplates: () => [] })} customizeToolbar={(items) => (seen.push(items.map((i) => i.id)), items)} />)
+    await within(toolbar()).findByRole('button', { name: 'Insert field' })
+    expect(seen.at(-1)).toEqual(['undo', 'redo', 'blockStyle', 'font', 'size', 'bold', 'italic', 'underline', 'colour', 'alignment', 'insertTable', 'tableMenu', 'insertField', 'insertBlock'])
+  })
+
+  it('removes and reorders the built-in controls', () => {
+    const customize: CustomizeToolbar = (items) => {
+      const kept = items.filter((i) => !['font', 'size', 'colour', 'alignment', 'tableMenu', 'blockStyle'].includes(i.id))
+      return [...kept.filter((i) => i.id === 'insertTable'), ...kept.filter((i) => i.id !== 'insertTable')]
+    }
+    render(<DocumentEditor initial={docJson(page(paragraph(text('Hello'))))} provider={provider({ listFields: () => [], listRepeatSources: () => [], listTemplates: () => [] })} customizeToolbar={customize} />)
+    expect(controls()).toEqual(['Insert table', 'Undo', 'Redo', 'Bold', 'Italic', 'Underline'])
+    expect(within(toolbar()).queryByRole('combobox', { name: 'Font' })).toBeNull()
+  })
+
+  it('shows the host’s own items, which act on the document and follow its state', async () => {
+    const user = userEvent.setup()
+    const ref = createRef<DocumentEditorHandle>()
+    const strong = ({ state, run }: ToolbarContext) => <ToolButton label="Strong" glyph="S" active={isMarkActive(state, state.schema.marks.strong!)} onPress={() => run(toggleStrong)} />
+    render(<DocumentEditor ref={ref} initial={docJson(page(paragraph(text('Hello'))))} provider={provider()} customizeToolbar={(items, context) => [{ id: 'strong', render: () => strong(context) }, ...items]} />)
+    const view = ref.current!.view!
+    act(() => view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2, 7))))
+    const button = within(toolbar()).getByRole('button', { name: 'Strong' })
+    expect(controls()[0]).toBe('Strong')
+    expect(button).toHaveAttribute('aria-pressed', 'false')
+    await user.click(button)
+    expect(JSON.stringify(ref.current!.getDocument()!.toJSON())).toContain('"type":"strong"')
+    expect(within(toolbar()).getByRole('button', { name: 'Strong' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('gives the host’s items the state of the block open in place', async () => {
+    const ref = createRef<DocumentEditorHandle>()
+    const insert = ({ run }: ToolbarContext) => <ToolButton label="Stamp" glyph="#" onPress={() => run((state, dispatch) => (dispatch?.(state.tr.insertText('Stamped')), true))} />
+    render(<DocumentEditor ref={ref} initial={docJson(page(paragraph(text('Intro')), repeat('list.items', paragraph(field('item.name')))))} provider={provider()} customizeToolbar={(items, context) => [...items, { id: 'stamp', render: () => insert(context) }]} />)
+    await waitFor(() => expect(canvas()).toHaveTextContent('First'))
+    fireEvent.dblClick(canvas().querySelector<HTMLElement>('.ie-repeat')!)
+    const inner = ref.current!.activeView!
+    expect(inner).not.toBe(ref.current!.view)
+    fireEvent.click(within(toolbar()).getByRole('button', { name: 'Stamp' }))
+    expect(inner.state.doc.textContent).toContain('Stamped')
+    expect(ref.current!.view!.state.doc.textContent).not.toContain('Stamped')
   })
 })

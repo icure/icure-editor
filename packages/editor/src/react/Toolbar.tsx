@@ -1,7 +1,8 @@
 // The editor's toolbar: undo and redo, block style, font, size, bold, italic, underline, colour,
-// alignment, tables, fields, repeating blocks, embedded templates and images.
+// alignment, tables, fields, repeating blocks, embedded templates and images. Each control is an
+// item with an id; the host may remove, reorder, wrap or add items (customize).
 import type { Command, EditorState } from 'prosemirror-state'
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 
 import {
   alignmentOf,
@@ -54,6 +55,28 @@ function tableItems(state: EditorState, run: (command: Command) => void, labels:
 // The colour picker's starting value (the picker needs a hex value).
 const DEFAULT_INK = '#000000'
 
+// The built-in controls, in their default order.
+export const TOOLBAR_ITEM_IDS = ['undo', 'redo', 'blockStyle', 'font', 'size', 'bold', 'italic', 'underline', 'colour', 'alignment', 'insertTable', 'tableMenu', 'insertField', 'insertBlock', 'insertTemplate', 'insertImage'] as const
+export type ToolbarItemId = (typeof TOOLBAR_ITEM_IDS)[number]
+
+// One control of the toolbar: a built-in one (its id is a ToolbarItemId) or the host's own.
+export interface ToolbarItem {
+  readonly id: string
+  readonly render: () => ReactNode
+}
+
+// What a host's items act on: the active view's state (the innermost block open in place) and the
+// command runner acting on that view.
+export interface ToolbarContext {
+  readonly state: EditorState
+  readonly run: (command: Command) => void
+  readonly labels: EditorLabels
+}
+
+// The host's hook: receives the built-in items (an unavailable control, such as a menu with nothing
+// to offer, is absent) and returns the items to show, in order. Ids must be unique.
+export type CustomizeToolbar = (items: readonly ToolbarItem[], context: ToolbarContext) => readonly ToolbarItem[]
+
 export interface ToolbarProps {
   readonly state: EditorState
   readonly run: (command: Command) => void
@@ -65,11 +88,12 @@ export interface ToolbarProps {
   readonly tableCommands: Readonly<Record<TableAction, Command>>
   readonly undo: Command
   readonly redo: Command
+  readonly customize?: CustomizeToolbar
   // Extra controls the host appends to the toolbar.
   readonly children?: ReactNode
 }
 
-interface ToolButtonProps {
+export interface ToolButtonProps {
   readonly label: string
   // An icon, or a short glyph from the labels (B, I, U).
   readonly glyph: ReactNode
@@ -78,7 +102,9 @@ interface ToolButtonProps {
   readonly onPress: () => void
 }
 
-function ToolButton({ label, glyph, active, disabled, onPress }: ToolButtonProps) {
+// A toolbar button: named by its label (aria-label and tooltip), pressed state when given; it keeps
+// the focus in the document while pressed.
+export function ToolButton({ label, glyph, active, disabled, onPress }: ToolButtonProps) {
   return (
     <Tooltip text={label}>
       <button type="button" className="ie-button ie-tool" aria-label={label} aria-pressed={active} disabled={disabled} onMouseDown={(e) => e.preventDefault()} onClick={onPress}>
@@ -88,11 +114,11 @@ function ToolButton({ label, glyph, active, disabled, onPress }: ToolButtonProps
   )
 }
 
-export function Toolbar({ state, run, labels, fields, repeatSources, templates, onInsertImage, tableCommands, undo, redo, children }: ToolbarProps) {
-  return (
-    <div role="toolbar" aria-label={labels.toolbar} className="ie-toolbar">
-      <ToolButton label={labels.undo} glyph={<UndoIcon />} disabled={!undo(state)} onPress={() => run(undo)} />
-      <ToolButton label={labels.redo} glyph={<RedoIcon />} disabled={!redo(state)} onPress={() => run(redo)} />
+function defaultItems({ state, run, labels, fields, repeatSources, templates, onInsertImage, tableCommands, undo, redo }: ToolbarProps): ToolbarItem[] {
+  const items: Record<ToolbarItemId, (() => ReactNode) | null> = {
+    undo: () => <ToolButton label={labels.undo} glyph={<UndoIcon />} disabled={!undo(state)} onPress={() => run(undo)} />,
+    redo: () => <ToolButton label={labels.redo} glyph={<RedoIcon />} disabled={!redo(state)} onPress={() => run(redo)} />,
+    blockStyle: () => (
       <select className="ie-select" aria-label={labels.blockStyle} value={blockStyleOf(state)} onChange={(e) => run(setBlockStyle(e.target.value as BlockStyle))}>
         {BLOCK_STYLES.map((style) => (
           <option key={style} value={style}>
@@ -100,6 +126,8 @@ export function Toolbar({ state, run, labels, fields, repeatSources, templates, 
           </option>
         ))}
       </select>
+    ),
+    font: () => (
       <select className="ie-select" aria-label={labels.font} defaultValue="" onChange={(e) => e.target.value && run(setStyleMark(marks.font, { font: e.target.value }))}>
         <option value="" disabled>
           {labels.font}
@@ -110,6 +138,8 @@ export function Toolbar({ state, run, labels, fields, repeatSources, templates, 
           </option>
         ))}
       </select>
+    ),
+    size: () => (
       <select className="ie-select" aria-label={labels.size} defaultValue="" onChange={(e) => e.target.value && run(setStyleMark(marks.size, { size: e.target.value }))}>
         <option value="" disabled>
           {labels.size}
@@ -120,18 +150,24 @@ export function Toolbar({ state, run, labels, fields, repeatSources, templates, 
           </option>
         ))}
       </select>
-      <ToolButton label={labels.bold} glyph={labels.boldGlyph} active={isMarkActive(state, marks.strong)} onPress={() => run(toggleStrong)} />
-      <ToolButton label={labels.italic} glyph={labels.italicGlyph} active={isMarkActive(state, marks.em)} onPress={() => run(toggleEm)} />
-      <ToolButton label={labels.underline} glyph={labels.underlineGlyph} active={isMarkActive(state, marks.underlined)} onPress={() => run(toggleUnderline)} />
+    ),
+    bold: () => <ToolButton label={labels.bold} glyph={labels.boldGlyph} active={isMarkActive(state, marks.strong)} onPress={() => run(toggleStrong)} />,
+    italic: () => <ToolButton label={labels.italic} glyph={labels.italicGlyph} active={isMarkActive(state, marks.em)} onPress={() => run(toggleEm)} />,
+    underline: () => <ToolButton label={labels.underline} glyph={labels.underlineGlyph} active={isMarkActive(state, marks.underlined)} onPress={() => run(toggleUnderline)} />,
+    colour: () => (
       <Tooltip text={labels.colour}>
         <input type="color" className="ie-colour" aria-label={labels.colour} defaultValue={DEFAULT_INK} onChange={(e) => run(setStyleMark(marks.color, { color: e.target.value }))} />
       </Tooltip>
+    ),
+    alignment: () => (
       <div role="group" aria-label={labels.alignment} className="ie-group">
         {SHOWN_ALIGNMENTS.map((align) => (
           <ToolButton key={align} label={labels.align[align]} glyph={<AlignIcon align={align} />} active={alignmentOf(state) === align} onPress={() => run(setAlignment(align))} />
         ))}
       </div>
-      <ToolButton label={labels.insertTable} glyph={<InsertTableIcon />} onPress={() => run(insertTable)} />
+    ),
+    insertTable: () => <ToolButton label={labels.insertTable} glyph={<InsertTableIcon />} onPress={() => run(insertTable)} />,
+    tableMenu: () => (
       <Menu
         label={labels.tableMenu}
         icon={<TableIcon />}
@@ -141,10 +177,30 @@ export function Toolbar({ state, run, labels, fields, repeatSources, templates, 
           ...(bodyTableRow(state) ? ROW_ZONES.map((zone) => ({ id: `zone-${zone}`, label: labels.rowZone[zone], onSelect: () => run(setRowZone(zone)) })) : []),
         ]}
       />
-      {fields.length > 0 && <Menu label={labels.insertField} icon={<FieldIcon />} items={fields.map((f) => ({ id: `${f.group ?? ''}/${f.key}`, label: f.label, ...(f.group ? { group: f.group } : {}), onSelect: () => run(insertField(f.key)) }))} />}
-      {repeatSources.length > 0 && <Menu label={labels.insertBlock} icon={<RepeatIcon />} items={repeatSources.map((s) => ({ id: s.key, label: s.label, onSelect: () => run(insertRepeat(s)) }))} />}
-      {templates.length > 0 && <Menu label={labels.insertTemplate} icon={<TemplateIcon />} items={templates.map((t) => ({ id: t.id, label: t.name, onSelect: () => run(insertTemplate(t.id)) }))} />}
-      {onInsertImage && <ToolButton label={labels.insertImage} glyph={<ImageIcon />} onPress={onInsertImage} />}
+    ),
+    insertField:
+      fields.length > 0
+        ? () => <Menu label={labels.insertField} icon={<FieldIcon />} items={fields.map((f) => ({ id: `${f.group ?? ''}/${f.key}`, label: f.label, ...(f.group ? { group: f.group } : {}), onSelect: () => run(insertField(f.key)) }))} />
+        : null,
+    insertBlock: repeatSources.length > 0 ? () => <Menu label={labels.insertBlock} icon={<RepeatIcon />} items={repeatSources.map((s) => ({ id: s.key, label: s.label, onSelect: () => run(insertRepeat(s)) }))} /> : null,
+    insertTemplate: templates.length > 0 ? () => <Menu label={labels.insertTemplate} icon={<TemplateIcon />} items={templates.map((t) => ({ id: t.id, label: t.name, onSelect: () => run(insertTemplate(t.id)) }))} /> : null,
+    insertImage: onInsertImage ? () => <ToolButton label={labels.insertImage} glyph={<ImageIcon />} onPress={onInsertImage} /> : null,
+  }
+  return TOOLBAR_ITEM_IDS.flatMap((id) => {
+    const render = items[id]
+    return render ? [{ id, render }] : []
+  })
+}
+
+export function Toolbar(props: ToolbarProps) {
+  const { state, run, labels, customize, children } = props
+  const defaults = defaultItems(props)
+  const items = customize ? customize(defaults, { state, run, labels }) : defaults
+  return (
+    <div role="toolbar" aria-label={labels.toolbar} className="ie-toolbar">
+      {items.map((item) => (
+        <Fragment key={item.id}>{item.render()}</Fragment>
+      ))}
       {children}
     </div>
   )

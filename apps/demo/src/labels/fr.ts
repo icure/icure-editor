@@ -98,6 +98,7 @@ export const fr: LabelSet = {
     downloadPdf: 'Télécharger le PDF',
     printPdf: 'Imprimer',
     readOnly: 'Lecture seule',
+    insertDate: 'Insérer la date',
     waitlistHeader: 'Liste d’attente :',
     fieldGroups: { recipient: 'Destinataire', organisation: 'Organisation', sender: 'Expéditeur', document: 'Document' },
     fields: {

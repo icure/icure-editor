@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 
+import { demoDate } from '../src/fakeContext.ts'
 import { APP, canvas, focusEnd, L, open, toolbar } from './helpers.ts'
 
 test.describe('toolbar accessibility', () => {
@@ -31,5 +32,14 @@ test.describe('toolbar accessibility', () => {
     await expect(menu.getByRole('menuitem', { name: APP.fields['recipient.firstName'] })).toBeFocused()
     await page.keyboard.press('Enter')
     await expect(canvas(page)).toContainText('Alex')
+  })
+
+  test('shows the host’s own button where its toolbar hook puts it, acting on the document', async ({ page }) => {
+    await open(page, 'blank')
+    const names = await toolbar(page).locator('button, select').evaluateAll((controls) => controls.map((c) => c.getAttribute('aria-label')))
+    expect(names.slice(0, 3)).toEqual([L.undo, L.redo, APP.insertDate])
+    await focusEnd(page)
+    await toolbar(page).getByRole('button', { name: APP.insertDate, exact: true }).click()
+    await expect(canvas(page)).toContainText(demoDate('en'))
   })
 })

@@ -22,6 +22,8 @@ export interface AppStrings {
   readonly downloadPdf: string
   readonly printPdf: string
   readonly readOnly: string
+  // The demo's own toolbar button (added through customizeToolbar).
+  readonly insertDate: string
   readonly waitlistHeader: string
   readonly fieldGroups: Readonly<Record<'recipient' | 'organisation' | 'sender' | 'document', string>>
   readonly fields: Readonly<Record<string, string>>

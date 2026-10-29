@@ -90,6 +90,33 @@ draws, a subset of `tblr` (`''` none); the default is all four in a grid table a
 table. A table nested in a layout table keeps its own rules. The Table menu sets both, its entries
 showing the current choice (`menuitemradio`); "all borders" is unavailable in a layout table.
 
+## Customising the toolbar
+
+`customizeToolbar` receives the built-in items, in order, and returns the items to show. With it the
+host can remove, reorder, wrap or add items. Each item is `{ id, render }`. The built-in ids are
+`TOOLBAR_ITEM_IDS`: `undo`, `redo`, `blockStyle`, `font`, `size`, `bold`, `italic`, `underline`,
+`colour`, `alignment`, `insertTable`, `tableMenu`, `insertField`, `insertBlock`, `insertTemplate`,
+`insertImage`. A control with nothing to offer is left out (for example, the field menu without
+fields, or the image button without an image provider). The context gives the active view's `state`,
+which is the innermost block open in place, along with `run(command)`, which acts on that view, and
+the merged `labels`.
+
+```tsx
+import { ToolButton, type CustomizeToolbar } from '@icure/editor'
+
+const customizeToolbar: CustomizeToolbar = (items, { state, run }) => [
+  ...items.filter((item) => item.id !== 'font' && item.id !== 'colour'),
+  { id: 'stamp', render: () => <ToolButton label="Insert stamp" glyph={<StampIcon />} onPress={() => run(insertStamp)} /> },
+]
+
+<DocumentEditor initial={template} provider={provider} customizeToolbar={customizeToolbar} />
+```
+
+Ids must be unique. `ToolButton` gives a host's button the toolbar's look, tooltip, `aria-label`
+and `aria-pressed` (`active`), and it keeps the focus in the document. A host's control that doesn't
+use `ToolButton` must still have an accessible name. `toolbarExtras` still appends controls after
+the items.
+
 ## The data provider
 
 ```ts

@@ -19,8 +19,13 @@ const later = <T,>(value: T): Promise<T> => new Promise((resolve) => setTimeout(
 
 const LOCALES: Readonly<Record<Language, string>> = { en: 'en-GB', fr: 'fr-FR', nl: 'nl-NL' }
 
+// The demo's day, as the language writes it.
+export function demoDate(language: Language): string {
+  return new Intl.DateTimeFormat(LOCALES[language], { day: '2-digit', month: '2-digit', year: 'numeric' }).format(DEMO_DAY)
+}
+
 function values(language: Language): Record<string, string> {
-  const date = new Intl.DateTimeFormat(LOCALES[language], { day: '2-digit', month: '2-digit', year: 'numeric' }).format(DEMO_DAY)
+  const date = demoDate(language)
   const money = new Intl.NumberFormat(LOCALES[language], { style: 'currency', currency: 'EUR' })
   return {
     'recipient.title': { en: 'Ms', fr: 'Mme', nl: 'Mevr.' }[language],

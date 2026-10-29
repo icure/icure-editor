@@ -98,6 +98,7 @@ export const nl: LabelSet = {
     downloadPdf: 'PDF downloaden',
     printPdf: 'Afdrukken',
     readOnly: 'Alleen lezen',
+    insertDate: 'Datum invoegen',
     waitlistHeader: 'Wachtlijst:',
     fieldGroups: { recipient: 'Ontvanger', organisation: 'Organisatie', sender: 'Afzender', document: 'Document' },
     fields: {

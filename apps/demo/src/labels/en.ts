@@ -19,6 +19,7 @@ export const en: LabelSet = {
     downloadPdf: 'Download PDF',
     printPdf: 'Print',
     readOnly: 'Read only',
+    insertDate: 'Insert date',
     waitlistHeader: 'Waiting list:',
     fieldGroups: { recipient: 'Recipient', organisation: 'Organisation', sender: 'Sender', document: 'Document' },
     fields: {

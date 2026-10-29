@@ -1,9 +1,9 @@
 // The demo: a template picker, the editor over a fake in-memory provider, the output (HTML preview,
 // raw Markdown, HTML and PDF download, print), a language and a theme switch. All state is in the URL.
-import { A4_PAGE, documentFileName, DocumentEditor, downloadBytes, HTML_TYPE, PDF_TYPE, printPdf, resolveDocument, toHtmlDocument, toMarkdown, type DocumentEditorHandle } from '@icure/editor'
+import { A4_PAGE, documentFileName, DocumentEditor, downloadBytes, HTML_TYPE, PDF_TYPE, printPdf, resolveDocument, toHtmlDocument, toMarkdown, ToolButton, type CustomizeToolbar, type DocumentEditorHandle } from '@icure/editor'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { createFakeProvider, DEMO_DAY, storedTemplate } from './fakeContext.ts'
+import { createFakeProvider, DEMO_DAY, demoDate, storedTemplate } from './fakeContext.ts'
 import { LABEL_SETS, LANGUAGES } from './labels/index.ts'
 import { documentPdf } from './pdf.ts'
 import { SAMPLE_TEMPLATES, sampleTemplate, TEMPLATE_GROUPS, type SampleTemplate } from './samples/templates.ts'
@@ -20,12 +20,29 @@ function useTheme(theme: Theme, language: string) {
 
 const templateName = (strings: { readonly templateNames: Readonly<Record<string, string>> }, t: SampleTemplate): string => strings.templateNames[t.id] ?? t.title ?? t.id
 
+// A calendar, the demo's own toolbar icon.
+const CalendarIcon = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="5" width="18" height="16" rx="2" />
+    <path d="M3 10h18M8 3v4M16 3v4" />
+  </svg>
+)
+
 export function App() {
   const [state, update] = useDemoState()
   const labels = LABEL_SETS[state.language]
   const strings = labels.app
   useTheme(state.theme, state.language)
   const provider = useMemo(() => createFakeProvider(state.language, strings), [state.language, strings])
+  // The toolbar hook: the demo's own button, after undo and redo, inserts the demo's day as text.
+  const customizeToolbar = useMemo<CustomizeToolbar>(() => {
+    const date = demoDate(state.language)
+    return (items, { run }) => {
+      const at = items.findIndex((item) => item.id === 'redo') + 1
+      const insertDate = { id: 'insertDate', render: () => <ToolButton label={strings.insertDate} glyph={<CalendarIcon />} onPress={() => run((s, dispatch) => (dispatch?.(s.tr.insertText(date)), true))} /> }
+      return [...items.slice(0, at), insertDate, ...items.slice(at)]
+    }
+  }, [state.language, strings])
   const template = sampleTemplate(state.template)!
   const editor = useRef<DocumentEditorHandle>(null)
   // The output, shown as rendered HTML (preview) or as raw Markdown.
@@ -135,7 +152,7 @@ export function App() {
         <main className="demo-main">
           <h2 className="demo-template-title">{name}</h2>
           {/* Keyed by template: a new template opens a new document, as last saved. */}
-          <DocumentEditor key={template.id} ref={editor} initial={storedTemplate(template.id) ?? template.content} provider={provider} documentId={template.id} page={page} labels={labels.editor} readOnly={state.readOnly} />
+          <DocumentEditor key={template.id} ref={editor} initial={storedTemplate(template.id) ?? template.content} provider={provider} documentId={template.id} page={page} labels={labels.editor} readOnly={state.readOnly} customizeToolbar={customizeToolbar} />
           <section aria-label={strings.output} className="demo-output">
             <h2>{strings.output}</h2>
             <div className="demo-actions">

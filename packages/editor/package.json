@@ -1,6 +1,6 @@
 {
   "name": "@icure/editor",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A paginated, template-aware document editor for React, built on ProseMirror: fields, repeating blocks, nested templates and images resolved through a host-supplied data provider, with HTML and PDF output.",
   "license": "GPL-3.0",
   "type": "module",

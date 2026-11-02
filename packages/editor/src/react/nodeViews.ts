@@ -10,7 +10,7 @@ import { clampImageWidth, safeAltText } from '../images.ts'
 import type { EditorLabels } from '../labels.ts'
 import { createSerializer } from '../output/html.ts'
 import { embedProblem, expression, renderBlocks, renderRepeatParts } from '../render.ts'
-import type { Resolution } from '../resolve.ts'
+import { imageOf, type Resolution } from '../resolve.ts'
 import { EMBED_CLASS, FIELD_CLASS, IMAGE_CLASS, REPEAT_BODY_CLASS, REPEAT_CLASS, REPEAT_FOOTER_CLASS, REPEAT_HEADER_CLASS, type RowZone } from '../schema.ts'
 import { scheduleReflow } from '../pagination.ts'
 import type { EditingLevel, InlineSession } from './inlineEditing.ts'
@@ -142,7 +142,7 @@ function embedView(node: ProseNode, getPos: GetPos, decorations: readonly Decora
 
 function imageView(node: ProseNode, view: EditorView, { resolution }: ViewInputs) {
   const id = String(node.attrs.imageId)
-  const resolved = resolution.images.get(id)
+  const resolved = imageOf(node, resolution)
   if (!resolved) {
     const dom = document.createElement('span')
     dom.className = `${IMAGE_CLASS} ${UNRESOLVED_CLASS}`
@@ -153,7 +153,7 @@ function imageView(node: ProseNode, view: EditorView, { resolution }: ViewInputs
   const dom = document.createElement('img')
   dom.className = IMAGE_CLASS
   dom.dataset.imageId = id
-  // The source was checked when resolved (images.ts): a data:, blob: or provider https: URL.
+  // The source was checked (images.ts): an embedded data: URI, or a data:, blob: or provider https: URL.
   dom.src = resolved.src
   dom.alt = safeAltText(node.attrs.alt) || safeAltText(resolved.alt)
   dom.draggable = false

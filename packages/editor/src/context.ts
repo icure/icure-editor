@@ -69,6 +69,9 @@ export interface PickedImage {
   readonly id: string
   readonly alt?: string
   readonly width?: number
+  // The image itself (a raster `data:` URI) when the host wants it EMBEDDED in the document rather
+  // than resolved by `resolve(id)` each time; checked by `safeEmbeddedImageSrc`.
+  readonly src?: string
 }
 
 export interface ImageProvider {

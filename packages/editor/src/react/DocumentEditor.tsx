@@ -325,7 +325,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
     (picked: PickedImage) => {
       const view = activeView()
       if (!view) return
-      insertImage({ imageId: picked.id, alt: picked.alt ?? '', width: picked.width ?? null })(view.state, view.dispatch)
+      insertImage({ imageId: picked.id, alt: picked.alt ?? '', width: picked.width ?? null, src: picked.src ?? null })(view.state, view.dispatch)
       const pos = view.state.selection.from - 1
       if (pos >= 0 && view.state.doc.nodeAt(pos)?.type.name === 'image') view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)))
       setFocusAlt(true)

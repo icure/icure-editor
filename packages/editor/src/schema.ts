@@ -10,7 +10,7 @@
 import { Schema, type DOMOutputSpec, type MarkSpec, type NodeSpec } from 'prosemirror-model'
 import { tableNodes } from 'prosemirror-tables'
 
-import { clampImageWidth, safeAltText, safeImageId } from './images.ts'
+import { clampImageWidth, safeAltText, safeEmbeddedImageSrc, safeImageId } from './images.ts'
 
 export const ALIGNMENTS = ['inherit', 'left', 'center', 'right', 'justify'] as const
 export type Alignment = (typeof ALIGNMENTS)[number]
@@ -140,16 +140,19 @@ const template_ref: NodeSpec = {
   ],
 }
 
-// An image by reference. No `src` in or out: the host's image provider resolves `imageId`.
+// An image by reference: the host's image provider resolves `imageId`. Or EMBEDDED: `src` holds the
+// image itself, a raster `data:` URI (`safeEmbeddedImageSrc`), and the provider is not asked. Never
+// a URL, in or out.
 const image: NodeSpec = {
   group: 'inline',
   inline: true,
   atom: true,
   draggable: false,
-  attrs: { imageId: { default: '' }, alt: { default: '' }, width: { default: null } },
+  attrs: { imageId: { default: '' }, alt: { default: '' }, width: { default: null }, src: { default: null } },
   toDOM: (node): DOMOutputSpec => {
     const width = clampImageWidth(node.attrs.width)
-    return ['img', { class: IMAGE_CLASS, 'data-image-id': String(node.attrs.imageId), alt: safeAltText(node.attrs.alt), ...(width ? { width: String(width) } : {}) }]
+    const src = safeEmbeddedImageSrc(node.attrs.src)
+    return ['img', { class: IMAGE_CLASS, 'data-image-id': String(node.attrs.imageId), alt: safeAltText(node.attrs.alt), ...(width ? { width: String(width) } : {}), ...(src ? { src } : {}) }]
   },
   parseDOM: [
     {
@@ -157,7 +160,7 @@ const image: NodeSpec = {
       getAttrs: (dom: HTMLElement | string) => {
         const element = elementOf(dom)
         const imageId = safeImageId(element?.dataset.imageId)
-        return imageId ? { imageId, alt: safeAltText(element?.getAttribute('alt')), width: clampImageWidth(element?.getAttribute('width')) } : false
+        return imageId ? { imageId, alt: safeAltText(element?.getAttribute('alt')), width: clampImageWidth(element?.getAttribute('width')), src: safeEmbeddedImageSrc(element?.getAttribute('src')) } : false
       },
     },
   ],

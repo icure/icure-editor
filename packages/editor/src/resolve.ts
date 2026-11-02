@@ -5,7 +5,7 @@ import type { Node as ProseNode } from 'prosemirror-model'
 
 import type { EditorDataProvider, ItemValues, RepeatData, RepeatSourceDescriptor, ResolvedImage, UnresolvedEntry, UnresolvedKind, UnresolvedReason } from './context.ts'
 import { fieldKey, imageKey, repeatKey, templateKey, toEditorDocument } from './document.ts'
-import { safeImageSrc, safeAltText } from './images.ts'
+import { safeEmbeddedImageSrc, safeImageSrc, safeAltText } from './images.ts'
 import { bodyTable, declaringField, declaringRepeat, EMPTY_SHAPE, rowZone, scopeFor, zonesOf, type RepeatShape, type ShapeScope } from './repeat.ts'
 import { editorSchema } from './schema.ts'
 
@@ -230,6 +230,13 @@ export function createResolver(provider: EditorDataProvider, options: ResolveOpt
           await embed(String(child.attrs.templateId), scope)
         } else if (child.type === nodes.image) {
           const id = String(child.attrs.imageId)
+          // An embedded image is its own source: the provider is not asked.
+          const embedded = safeEmbeddedImageSrc(child.attrs.src, options.maxImageBytes ? { maxBytes: options.maxImageBytes } : {})
+          if (embedded) {
+            images.set(id, { src: embedded })
+            mark(imageKey(id), 'image', null)
+            continue
+          }
           const loaded = await image(id)
           if (loaded.ok) images.set(id, loaded.value)
           mark(imageKey(id), 'image', loaded.ok ? null : loaded.reason)
@@ -328,4 +335,12 @@ export function sameResolution(a: Resolution, b: Resolution): boolean {
     sameShapes(a.shapes, b.shapes) &&
     JSON.stringify(a.unresolved) === JSON.stringify(b.unresolved)
   )
+}
+
+// The source an image node is drawn with: its own embedded image when it carries a valid one, else
+// what the resolution holds for its id. Every output and the editor read images through this, so an
+// embedded image shows even under a resolution that never saw it (`EMPTY_RESOLUTION`).
+export function imageOf(node: ProseNode, resolution: Resolution): ResolvedImage | undefined {
+  const embedded = safeEmbeddedImageSrc(node.attrs.src)
+  return embedded ? { src: embedded } : resolution.images.get(String(node.attrs.imageId))
 }

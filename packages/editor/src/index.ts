@@ -27,7 +27,7 @@ export { EMPTY_DOCUMENT, fieldKey, imageKey, InvalidDocumentError, isEditorDocum
 
 // Resolution and rendering.
 export type { RepeatShape } from './repeat.ts'
-export { createResolver, DEFAULT_MAX_TEMPLATE_DEPTH, EMPTY_RESOLUTION, MAX_REPEAT_NESTING, resolveDocument, sameResolution, toItemContext, type ItemContext, type Resolution, type ResolvedRepeat, type ResolvedTemplate, type Resolver, type ResolveOptions } from './resolve.ts'
+export { createResolver, DEFAULT_MAX_TEMPLATE_DEPTH, EMPTY_RESOLUTION, imageOf, MAX_REPEAT_NESTING, resolveDocument, sameResolution, toItemContext, type ItemContext, type Resolution, type ResolvedRepeat, type ResolvedTemplate, type Resolver, type ResolveOptions } from './resolve.ts'
 export { embedProblem, expression, renderBlocks, renderDocument, renderRepeatParts, templateOf, type RenderOptions, type RepeatParts } from './render.ts'
 
 // Commands (for hosts building their own toolbar).
@@ -71,6 +71,7 @@ export {
   MIN_IMAGE_WIDTH,
   safeAltText,
   safeImageId,
+  safeEmbeddedImageSrc,
   safeImageSrc,
   type ImageFileError,
   type ImageFileRules,

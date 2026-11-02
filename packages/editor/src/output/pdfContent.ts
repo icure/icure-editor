@@ -7,7 +7,7 @@ import type { Mark, Node as ProseNode } from 'prosemirror-model'
 import { clampImageWidth, dataUriType } from '../images.ts'
 import type { PageFormat } from '../pagination.ts'
 import { renderDocument } from '../render.ts'
-import type { Resolution } from '../resolve.ts'
+import { imageOf, type Resolution } from '../resolve.ts'
 import { cellSides, editorSchema, safeAlignment, safeColour, safeFont, safeSize } from '../schema.ts'
 
 const { nodes, marks } = editorSchema
@@ -129,7 +129,7 @@ function runOf(text: string, nodeMarks: readonly Mark[]): TextRun {
 }
 
 function imageBlock(node: ProseNode, resolution: Resolution, maxWidthPt: number, align: PdfAlignment | undefined): PdfBlock | null {
-  const resolved = resolution.images.get(String(node.attrs.imageId))
+  const resolved = imageOf(node, resolution)
   const type = resolved ? dataUriType(resolved.src) : null
   if (!resolved || !type || !PDF_IMAGE_TYPES.includes(type)) return null
   const widthPx = clampImageWidth(node.attrs.width) ?? (resolved.width ? clampImageWidth(resolved.width) : null)

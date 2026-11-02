@@ -57,6 +57,14 @@ describe('an embedded image', () => {
     expect(toMarkdown(document, EMPTY_RESOLUTION)).toContain(`![Logo](${PNG_DATA_URI})`)
   })
 
+  it('is held to the host’s size limit when drawn, not only when resolved', async () => {
+    const document = toEditorDocument(docJson(page(paragraph(embedded('logo', PNG_DATA_URI)))))
+    const resolution = await resolveDocument(document, fakeProvider({}), { maxImageBytes: 10 })
+    expect(resolution.images.has('logo')).toBe(false)
+    expect(toHtml(document, resolution)).not.toContain('<img')
+    expect(toPdfContent(document, resolution, { title: 'x', createdAt: new Date('2026-01-01T00:00:00Z') }).blocks.some((block) => block.kind === 'image')).toBe(false)
+  })
+
   it('that breaks the rules is not drawn and falls back to the provider', async () => {
     const document = toEditorDocument(docJson(page(paragraph(embedded('a', SPOOFED), embedded('b', 'https://tracker.example/b.png')))))
     expect(toHtml(document, EMPTY_RESOLUTION)).not.toContain('<img')

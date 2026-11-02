@@ -47,6 +47,9 @@ export interface Resolution {
   // The id of the document being edited, so that it can't embed itself.
   readonly rootId: string | null
   readonly maxDepth: number
+  // The host's limit on a `data:` image (`ResolveOptions.maxImageBytes`), which an embedded image
+  // drawn through `imageOf` is held to as well; absent: the default limit.
+  readonly maxImageBytes?: number
 }
 
 export const DEFAULT_MAX_TEMPLATE_DEPTH = 5
@@ -297,7 +300,7 @@ export function createResolver(provider: EditorDataProvider, options: ResolveOpt
       seen.add(key)
       return [{ key, kind, reason }]
     })
-    return { fields, repeats, templates, images, shapes, unresolved, rootId, maxDepth }
+    return { fields, repeats, templates, images, shapes, unresolved, rootId, maxDepth, ...(options.maxImageBytes ? { maxImageBytes: options.maxImageBytes } : {}) }
   }
 
   return {
@@ -328,6 +331,7 @@ export function sameResolution(a: Resolution, b: Resolution): boolean {
   return (
     a.rootId === b.rootId &&
     a.maxDepth === b.maxDepth &&
+    a.maxImageBytes === b.maxImageBytes &&
     sameMap(a.fields, b.fields) &&
     sameMap(a.repeats, b.repeats) &&
     sameMap(a.templates, b.templates) &&
@@ -338,9 +342,10 @@ export function sameResolution(a: Resolution, b: Resolution): boolean {
 }
 
 // The source an image node is drawn with: its own embedded image when it carries a valid one, else
-// what the resolution holds for its id. Every output and the editor read images through this, so an
+// what the resolution holds for its id. The embedded image is held to the host's size limit, carried
+// by the resolution (the default limit under `EMPTY_RESOLUTION`). Every output and the editor read images through this, so an
 // embedded image shows even under a resolution that never saw it (`EMPTY_RESOLUTION`).
 export function imageOf(node: ProseNode, resolution: Resolution): ResolvedImage | undefined {
-  const embedded = safeEmbeddedImageSrc(node.attrs.src)
+  const embedded = safeEmbeddedImageSrc(node.attrs.src, resolution.maxImageBytes ? { maxBytes: resolution.maxImageBytes } : {})
   return embedded ? { src: embedded } : resolution.images.get(String(node.attrs.imageId))
 }

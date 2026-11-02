@@ -3,7 +3,7 @@
 import { setBlockType, toggleMark } from 'prosemirror-commands'
 import type { MarkType, Node as ProseNode, ResolvedPos } from 'prosemirror-model'
 import { NodeSelection, type Command, type EditorState } from 'prosemirror-state'
-import { CellSelection, selectionCell } from 'prosemirror-tables'
+import { CellSelection, deleteTable, selectionCell } from 'prosemirror-tables'
 
 import type { RepeatSourceDescriptor } from './context.ts'
 import { fieldKey, imageKey, repeatKey, templateKey } from './document.ts'
@@ -71,6 +71,14 @@ export const insertTable: Command = (state, dispatch) => {
   const cell = () => nodes.table_cell.createAndFill()!
   const table = nodes.table.create(null, [nodes.table_row.create(null, [cell(), cell()]), nodes.table_row.create(null, [cell(), cell()])])
   return insert(table)(state, dispatch)
+}
+
+// Delete or Backspace on a cell selection covering every cell removes the table (a partial one only
+// empties its cells, upstream's behaviour).
+export const deleteSelectedTable: Command = (state, dispatch) => {
+  const { selection } = state
+  if (!(selection instanceof CellSelection) || !selection.isRowSelection() || !selection.isColSelection()) return false
+  return deleteTable(state, dispatch)
 }
 
 // The sides the selected cells draw (see `safeBorders`): 'tblr' all, '' none, 't' the top only.

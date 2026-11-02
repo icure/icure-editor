@@ -89,6 +89,8 @@ blocks out; the editor outlines it, the outputs never do). A cell's `borders` na
 draws, a subset of `tblr` (`''` none); the default is all four in a grid table and none in a layout
 table. A table nested in a layout table keeps its own rules. The Table menu sets both, its entries
 showing the current choice (`menuitemradio`); "all borders" is unavailable in a layout table.
+Delete or Backspace with every cell of a table selected removes the table; with only some cells
+selected, it empties them.
 
 ## Customising the toolbar
 

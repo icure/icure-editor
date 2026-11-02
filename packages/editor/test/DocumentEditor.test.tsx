@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { TextSelection } from 'prosemirror-state'
+import { CellSelection } from 'prosemirror-tables'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -8,8 +9,9 @@ import { toggleStrong } from '../src/commands.ts'
 import { DocumentEditor, type DocumentEditorHandle } from '../src/react/DocumentEditor.tsx'
 import { ToolButton, type CustomizeToolbar, type ToolbarContext } from '../src/react/Toolbar.tsx'
 import { DEFAULT_LABELS } from '../src/labels.ts'
-import { docJson, embed, field, page, paragraph, PNG_DATA_URI, repeat, text, zoned } from './helpers.ts'
+import { cell, docJson, embed, field, page, paragraph, PNG_DATA_URI, repeat, row, table, text, zoned } from './helpers.ts'
 import { isMarkActive } from '../src/commands.ts'
+import type { EditorView } from 'prosemirror-view'
 import { createRef } from 'react'
 
 const PNG_BYTES = Uint8Array.from(atob(PNG_DATA_URI.split(',')[1]!), (c) => c.charCodeAt(0))
@@ -251,5 +253,60 @@ describe('the toolbar hook', () => {
     fireEvent.click(within(toolbar()).getByRole('button', { name: 'Stamp' }))
     expect(inner.state.doc.textContent).toContain('Stamped')
     expect(ref.current!.view!.state.doc.textContent).not.toContain('Stamped')
+  })
+})
+
+describe('deleting a selected table', () => {
+  const grid = table(row(cell('table_cell', text('A1')), cell('table_cell', text('B1'))), row(cell('table_cell', text('A2')), cell('table_cell', text('B2'))))
+
+  async function selectCells(from: string, to: string) {
+    const ref = createRef<DocumentEditorHandle>()
+    render(<DocumentEditor ref={ref} initial={docJson(page(paragraph(text('Before')), grid, paragraph(text('After'))))} provider={provider()} />)
+    await waitFor(() => expect(canvas()).toHaveTextContent('B2'))
+    const view = ref.current!.view!
+    // The position of the cell holding a text.
+    const cellOf = (label: string) => {
+      let at = -1
+      view.state.doc.descendants((node, pos) => void (node.type.name === 'table_cell' && node.textContent === label && (at = pos)))
+      return view.state.doc.resolve(at)
+    }
+    act(() => view.dispatch(view.state.tr.setSelection(new CellSelection(cellOf(from), cellOf(to)))))
+    return view
+  }
+  const tables = (view: EditorView) => {
+    let count = 0
+    view.state.doc.descendants((node) => void (node.type.name === 'table' && count++))
+    return count
+  }
+
+  for (const key of ['Delete', 'Backspace'] as const) {
+    it(`removes the whole table with ${key} when every cell is selected`, async () => {
+      const view = await selectCells('A1', 'B2')
+      fireEvent.keyDown(canvas(), { key, keyCode: key === 'Delete' ? 46 : 8 })
+      expect(tables(view)).toBe(0)
+      expect(canvas()).toHaveTextContent('BeforeAfter')
+    })
+  }
+
+  it('only empties the selected cells when some are left out', async () => {
+    const view = await selectCells('A1', 'B1')
+    fireEvent.keyDown(canvas(), { key: 'Delete', keyCode: 46 })
+    expect(tables(view)).toBe(1)
+    expect(canvas()).toHaveTextContent('A2B2')
+    expect(canvas()).not.toHaveTextContent('A1')
+  })
+
+  it('leaves an empty paragraph when the table was the page’s only content', async () => {
+    const ref = createRef<DocumentEditorHandle>()
+    render(<DocumentEditor ref={ref} initial={docJson(page(grid))} provider={provider()} />)
+    await waitFor(() => expect(canvas()).toHaveTextContent('B2'))
+    const view = ref.current!.view!
+    const first = 3
+    let last = -1
+    view.state.doc.descendants((node, pos) => void (node.type.name === 'table_cell' && (last = pos)))
+    act(() => view.dispatch(view.state.tr.setSelection(new CellSelection(view.state.doc.resolve(first), view.state.doc.resolve(last)))))
+    fireEvent.keyDown(canvas(), { key: 'Backspace', keyCode: 8 })
+    expect(tables(view)).toBe(0)
+    expect(view.state.doc.child(0).firstChild?.type.name).toBe('paragraph')
   })
 })

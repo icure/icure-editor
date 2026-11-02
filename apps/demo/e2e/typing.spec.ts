@@ -113,4 +113,32 @@ test.describe('typing and formatting', () => {
     await expect(canvas(page).locator('.ie-page')).toHaveCount(2)
     await expect(canvas(page).locator('.ie-page').nth(1)).toContainText('Last line')
   })
+
+  test('deletes a table whose cells are all selected, and only empties a partial selection', async ({ page }) => {
+    await open(page, 'blank')
+    await focusEnd(page)
+    await toolbar(page).getByRole('button', { name: L.insertTable }).click()
+    const cells = canvas(page).locator('table td')
+    await expect(cells).toHaveCount(4)
+    for (const [index, label] of ['A1', 'B1', 'A2', 'B2'].entries()) {
+      await clickInto(page, cells.nth(index))
+      await page.keyboard.type(label)
+    }
+    // Dragging from one cell to another selects cells.
+    const drag = async (from: number, to: number) => {
+      await cells.nth(from).hover()
+      await page.mouse.down()
+      await cells.nth(to).hover()
+      await page.mouse.up()
+      await expect(canvas(page).locator('td.selectedCell')).toHaveCount(Math.abs(to - from) + 1)
+    }
+    await drag(0, 1)
+    await page.keyboard.press('Delete')
+    await expect(cells).toHaveCount(4)
+    await expect(cells.nth(0)).toHaveText('')
+    await expect(cells.nth(2)).toHaveText('A2')
+    await drag(0, 3)
+    await page.keyboard.press('Backspace')
+    await expect(canvas(page).locator('table')).toHaveCount(0)
+  })
 })

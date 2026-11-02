@@ -12,7 +12,7 @@ import { EditorState, NodeSelection, Plugin, Selection, TextSelection, type Comm
 import { goToNextCell, tableEditing } from 'prosemirror-tables'
 import { EditorView, type Decoration } from 'prosemirror-view'
 
-import { toggleEm, toggleStrong, toggleUnderline } from '../commands.ts'
+import { deleteSelectedTable, toggleEm, toggleStrong, toggleUnderline } from '../commands.ts'
 import type { MaybePromise } from '../context.ts'
 import { dropEmptyZones, editingKey, editingPlugin, editingTarget, SESSION_SPEC, templateBlocks, withAllZones } from '../editing.ts'
 import type { EditorLabels } from '../labels.ts'
@@ -23,7 +23,7 @@ import { nodeViews } from './nodeViews.ts'
 
 const { nodes } = editorSchema
 
-export const KEYMAP: Readonly<Record<string, Command>> = { 'Mod-b': toggleStrong, 'Mod-i': toggleEm, 'Mod-u': toggleUnderline, 'Mod-z': undo, 'Mod-y': redo, 'Shift-Mod-z': redo, Tab: goToNextCell(1), 'Shift-Tab': goToNextCell(-1) }
+export const KEYMAP: Readonly<Record<string, Command>> = { 'Mod-b': toggleStrong, 'Mod-i': toggleEm, 'Mod-u': toggleUnderline, 'Mod-z': undo, 'Mod-y': redo, 'Shift-Mod-z': redo, Tab: goToNextCell(1), 'Shift-Tab': goToNextCell(-1), Delete: deleteSelectedTable, Backspace: deleteSelectedTable }
 
 // What the editing areas ask of the editor around them.
 export interface EditingHost {

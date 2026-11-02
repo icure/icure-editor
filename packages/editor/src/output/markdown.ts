@@ -6,7 +6,7 @@ import type { Mark, Node as ProseNode } from 'prosemirror-model'
 
 import { safeAltText } from '../images.ts'
 import { renderDocument, type RenderOptions } from '../render.ts'
-import type { Resolution } from '../resolve.ts'
+import { imageOf, type Resolution } from '../resolve.ts'
 import { editorSchema } from '../schema.ts'
 
 const { nodes, marks } = editorSchema
@@ -61,7 +61,7 @@ function inlineContent(block: ProseNode, resolution: Resolution, options: Markdo
     if (node.isText) text = escapeInline(node.text ?? '')
     else if (node.type === nodes.hard_break) text = '\\\n'
     else if (node.type === nodes.image) {
-      const resolved = resolution.images.get(String(node.attrs.imageId))
+      const resolved = imageOf(node, resolution)
       if (!resolved || options.images === false) return
       const alt = safeAltText(node.attrs.alt) || safeAltText(resolved.alt)
       text = `![${escapeInline(alt)}](${escapeDestination(resolved.src)})`

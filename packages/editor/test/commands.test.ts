@@ -97,10 +97,10 @@ describe('commands', () => {
     let state = apply(stateAt(6), insertImage({ imageId: 'logo', alt: 'Logo', width: 5 }))
     const pos = state.selection.from - 1
     state = state.apply(state.tr.setSelection(NodeSelection.create(state.doc, pos)))
-    expect(selectedImage(state)?.node.attrs).toEqual({ imageId: 'logo', alt: 'Logo', width: 16 })
+    expect(selectedImage(state)?.node.attrs).toEqual({ imageId: 'logo', alt: 'Logo', width: 16, src: null })
     expect(selectedKey(state)).toBe('image:logo')
     state = apply(state, updateSelectedImage({ alt: 'The logo', width: 300 }))
-    expect(selectedImage(state)?.node.attrs).toEqual({ imageId: 'logo', alt: 'The logo', width: 300 })
+    expect(selectedImage(state)?.node.attrs).toEqual({ imageId: 'logo', alt: 'The logo', width: 300, src: null })
   })
 
   it('aligns every paragraph the selection touches', () => {

@@ -53,6 +53,24 @@ export function safeImageSrc(value: unknown, { maxBytes = DEFAULT_MAX_IMAGE_BYTE
   }
 }
 
+// An image a DOCUMENT carries itself (the image node's `src`): a raster `data:` URI within the size
+// limit whose bytes start like the type it declares — never a URL, so a document never makes the
+// editor or its outputs fetch anything. Checked wherever it is used, since a document's JSON is not
+// sanitised when it is loaded.
+export function safeEmbeddedImageSrc(value: unknown, { maxBytes = DEFAULT_MAX_IMAGE_BYTES }: ImageSourceOptions = {}): string | null {
+  if (typeof value !== 'string') return null
+  const src = value.trim()
+  const data = DATA_URI.exec(src)
+  if (!data || base64Bytes(data[2]!) > maxBytes) return null
+  let head: Uint8Array
+  try {
+    head = Uint8Array.from(atob(data[2]!.slice(0, 16)), (char) => char.charCodeAt(0))
+  } catch {
+    return null
+  }
+  return sniff(head) === data[1] ? src : null
+}
+
 export const isDataUri = (src: string): boolean => DATA_URI.test(src)
 export const dataUriType = (src: string): ImageType | null => (DATA_URI.exec(src)?.[1] as ImageType | undefined) ?? null
 

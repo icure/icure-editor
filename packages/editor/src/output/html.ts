@@ -6,7 +6,7 @@ import { DOMSerializer, type Node as ProseNode } from 'prosemirror-model'
 import { IMAGE_CLASS, editorSchema } from '../schema.ts'
 import { clampImageWidth, safeAltText } from '../images.ts'
 import { renderDocument } from '../render.ts'
-import type { Resolution } from '../resolve.ts'
+import { imageOf, type Resolution } from '../resolve.ts'
 import { expression } from '../render.ts'
 import { imageKey } from '../document.ts'
 import { A4_PAGE, type PageFormat } from '../pagination.ts'
@@ -24,7 +24,7 @@ export function createSerializer(resolution: Resolution, { missingImage = 'omit'
       ...base.nodes,
       image: (node) => {
         const id = String(node.attrs.imageId)
-        const resolved = resolution.images.get(id)
+        const resolved = imageOf(node, resolution)
         const width = clampImageWidth(node.attrs.width) ?? (resolved?.width ? clampImageWidth(resolved.width) : null)
         if (!resolved) return missingImage === 'expression' ? ['span', { class: `${IMAGE_CLASS} ie-unresolved-ref`, 'data-image-id': id }, expression(imageKey(id))] : ['span', { 'data-image-id': id, hidden: 'hidden' }]
         return ['img', { class: IMAGE_CLASS, 'data-image-id': id, src: resolved.src, alt: safeAltText(node.attrs.alt) || safeAltText(resolved.alt), ...(width ? { width: String(width) } : {}) }]

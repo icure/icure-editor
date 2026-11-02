@@ -12,7 +12,8 @@ the document is shown or printed:
   items may hold lists of their own;
 - **embedded templates**: another template inlined by id, recursively, with cycle detection and a
   depth limit;
-- **images**: a reference to the host's image store, with alt text and a width.
+- **images**: a reference to the host's image store, or the image itself embedded in the document
+  (a raster `data:` URI), with alt text and a width.
 
 References the provider can't fill are never left silently blank: they show as their expression
 (`{recipient.city}`) and are listed behind an "unresolved references" chip. The output (HTML and
@@ -258,10 +259,15 @@ into an editing area showing its template, fields as placeholders (`{event.title
   character. The library does not read a name; the host's provider does.
 - **Nothing is evaluated.** A field is looked up by key; its value is inserted as a text node, never
   as HTML, in the editor and in both outputs.
-- **Images are references, not URLs.** The schema neither reads nor writes `src`: an
-  `<img src="https://…">` in pasted HTML is dropped. Only the host's provider maps an id to a source,
-  and that source must be a raster `data:` URI (PNG, JPEG, GIF, WebP, within the size limit), a
-  `blob:` URL or an `https:` URL without credentials; SVG and every other scheme are refused.
+- **Images are references or embedded, never URLs.** An image node holds an id the host's provider
+  maps to a source — a raster `data:` URI (PNG, JPEG, GIF, WebP, within the size limit), a `blob:`
+  URL or an `https:` URL without credentials; SVG and every other scheme are refused. Or it EMBEDS
+  the image in its `src` attribute: then only a raster `data:` URI whose bytes match its declared
+  type, within the size limit (`safeEmbeddedImageSrc`), checked wherever it is drawn or printed
+  (`imageOf`), since a document's JSON is not sanitised when loaded; the provider is not asked. An
+  `<img src="https://…">` in pasted HTML is dropped; a pasted embedded image keeps its `data:` source
+  only under the same rule. A host embeds an image it picked or received by returning its `src`
+  with the `PickedImage`.
   Uploaded files are checked for declared type, size (2 MB by default) and actual content (magic
   numbers) before the host sees them.
 - **Editing in place** uses the same schema (pasted HTML goes through the same parser); a template

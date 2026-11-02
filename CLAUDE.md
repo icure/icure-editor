@@ -58,7 +58,10 @@ A change is done when typecheck, unit tests and e2e are green.
   - values are text nodes, never HTML; nothing is evaluated;
   - the schema accepts no link, script, raw HTML or image URL; every style value passes a closed
     pattern;
-  - an image source comes only from the host's provider and passes `safeImageSrc`;
+  - an image source comes from the host's provider and passes `safeImageSrc`, or is EMBEDDED in the
+    document (the image node's `src`): then only a raster `data:` URI whose bytes match its type,
+    within the size limit (`safeEmbeddedImageSrc`), checked wherever it is read (`imageOf`) since a
+    document's JSON is not sanitised on load — never a URL;
   - uploads pass `checkImageFile` (type, size, magic numbers) before the host's `upload`;
   - nested templates are bounded by cycle detection and `maxDepth`.
 - Tests assert behaviour (what the user sees or what is printed), not the declaration just written.

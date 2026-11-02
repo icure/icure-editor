@@ -7,7 +7,7 @@ import { CellSelection, deleteTable, selectionCell } from 'prosemirror-tables'
 
 import type { RepeatSourceDescriptor } from './context.ts'
 import { fieldKey, imageKey, repeatKey, templateKey } from './document.ts'
-import { clampImageWidth, safeAltText, safeImageId } from './images.ts'
+import { clampImageWidth, safeAltText, safeEmbeddedImageSrc, safeImageId } from './images.ts'
 import { cellSides, DEFAULT_BORDERS, editorSchema, safeAlignment, safeBorders, safeIdentifier, safeLayout, type Alignment, type TableLayout } from './schema.ts'
 
 const { nodes, marks } = editorSchema
@@ -189,11 +189,13 @@ export interface ImageAttrs {
   readonly imageId: string
   readonly alt?: string
   readonly width?: number | null
+  // The image itself, to embed it in the document (a raster `data:` URI); absent: by reference.
+  readonly src?: string | null
 }
 
-export function insertImage({ imageId, alt, width }: ImageAttrs): Command {
+export function insertImage({ imageId, alt, width, src }: ImageAttrs): Command {
   const id = safeImageId(imageId)
-  return insert(id ? nodes.image.create({ imageId: id, alt: safeAltText(alt), width: clampImageWidth(width) }) : null)
+  return insert(id ? nodes.image.create({ imageId: id, alt: safeAltText(alt), width: clampImageWidth(width), src: safeEmbeddedImageSrc(src) }) : null)
 }
 
 // The selected image, if the selection is on one.

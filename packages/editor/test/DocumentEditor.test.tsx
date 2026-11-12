@@ -227,6 +227,104 @@ describe('the background menu', () => {
   })
 })
 
+describe('the text colour menu', () => {
+  const selectHello = (view: EditorView) => act(() => view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2, 7))))
+
+  it('offers black, the darker hues, then the picker; black takes the colour away', async () => {
+    const user = userEvent.setup()
+    const ref = createRef<DocumentEditorHandle>()
+    render(<DocumentEditor ref={ref} initial={docJson(page(paragraph(text('Hello'))))} provider={provider()} />)
+    const view = ref.current!.view!
+    selectHello(view)
+    const toolbar = screen.getByRole('toolbar', { name: 'Formatting' })
+    await user.click(within(toolbar).getByRole('button', { name: 'Text colour' }))
+    expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual(['Black', 'Dark yellow', 'Dark green', 'Dark blue', 'Dark pink', 'Dark grey', 'Other colour…'])
+    expect(screen.getByRole('menuitemradio', { name: 'Black' })).toHaveAttribute('aria-checked', 'true')
+    await user.click(screen.getByRole('menuitemradio', { name: 'Dark blue' }))
+    expect(view.dom.querySelector<HTMLElement>('span[style*="color"]')?.style.color).toBe('rgb(13, 71, 161)')
+
+    await user.click(within(toolbar).getByRole('button', { name: 'Text colour' }))
+    await user.click(screen.getByRole('menuitemradio', { name: 'Black' }))
+    expect(view.dom.querySelector('span[style*="color"]')).toBeNull()
+  })
+
+  it('applies the picker’s colour once it is confirmed, and checks « Other colour… » for it', async () => {
+    const user = userEvent.setup()
+    const ref = createRef<DocumentEditorHandle>()
+    const { container } = render(<DocumentEditor ref={ref} initial={docJson(page(paragraph(text('Hello'))))} provider={provider()} />)
+    const view = ref.current!.view!
+    selectHello(view)
+    const toolbar = screen.getByRole('toolbar', { name: 'Formatting' })
+    const picker = container.querySelector<HTMLInputElement>('.ie-colour-menu:has([aria-label="Text colour"]) input[type="color"]')!
+    // The picker is no tab stop of its own: the menu's last entry opens it.
+    expect(picker).toHaveAttribute('tabindex', '-1')
+    const opened = vi.fn()
+    picker.showPicker = opened
+    await user.click(within(toolbar).getByRole('button', { name: 'Text colour' }))
+    await user.click(screen.getByRole('menuitemradio', { name: 'Other colour…' }))
+    expect(opened).toHaveBeenCalledTimes(1)
+    // Moving in the picker changes nothing; confirming applies the colour.
+    fireEvent.input(picker, { target: { value: '#336699' } })
+    expect(view.dom.querySelector('span[style*="color"]')).toBeNull()
+    fireEvent.change(picker, { target: { value: '#336699' } })
+    expect(view.dom.querySelector<HTMLElement>('span[style*="color"]')?.style.color).toBe('rgb(51, 102, 153)')
+    await user.click(within(toolbar).getByRole('button', { name: 'Text colour' }))
+    expect(screen.getByRole('menuitemradio', { name: 'Other colour…' })).toHaveAttribute('aria-checked', 'true')
+  })
+})
+
+describe('the colour menus of a document whose colours are not colours', () => {
+  it('show no swatch and no icon colour for a mark value outside the colour pattern', async () => {
+    const user = userEvent.setup()
+    const ref = createRef<DocumentEditorHandle>()
+    const hostile = 'url(https://example.invalid/x.png)'
+    const { container } = render(
+      <DocumentEditor ref={ref} initial={docJson(page(paragraph(text('Hello', [{ type: 'color', attrs: { color: hostile } }, { type: 'background', attrs: { background: hostile } }]))))} provider={provider()} />,
+    )
+    const view = ref.current!.view!
+    act(() => view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 3))))
+    const toolbar = screen.getByRole('toolbar', { name: 'Formatting' })
+    for (const name of ['Text colour', 'Background colour']) {
+      await user.click(within(toolbar).getByRole('button', { name }))
+      expect(screen.getAllByRole('menuitemradio')[0]).toHaveAttribute('aria-checked', 'true')
+      await user.keyboard('{Escape}')
+    }
+    expect(container.innerHTML).not.toContain('example.invalid')
+  })
+})
+
+describe('the background of table cells', () => {
+  it('colours the SELECTED cells themselves, not their text, and takes it away again', async () => {
+    const user = userEvent.setup()
+    const ref = createRef<DocumentEditorHandle>()
+    render(<DocumentEditor ref={ref} initial={docJson(page(table(row(cell('table_cell', text('A1')), cell('table_cell', text('B1'))), row(cell('table_cell', text('A2')), cell('table_cell', text('B2'))))))} provider={provider()} />)
+    const view = ref.current!.view!
+    const cellPositions: number[] = []
+    view.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'table_cell') cellPositions.push(pos)
+    })
+    // The first row: A1 and B1.
+    act(() => view.dispatch(view.state.tr.setSelection(CellSelection.create(view.state.doc, cellPositions[0]!, cellPositions[1]!))))
+    const toolbar = screen.getByRole('toolbar', { name: 'Formatting' })
+    await user.click(within(toolbar).getByRole('button', { name: 'Background colour' }))
+    await user.click(screen.getByRole('menuitemradio', { name: 'Green' }))
+    const backgrounds = () => {
+      const found: (string | null)[] = []
+      view.state.doc.descendants((node) => {
+        if (node.type.name === 'table_cell') found.push(node.attrs.background as string | null)
+      })
+      return found
+    }
+    expect(backgrounds()).toEqual(['#c8e6c9', '#c8e6c9', null, null])
+    expect(view.dom.querySelector('span[style*="background-color"]')).toBeNull()
+
+    await user.click(within(toolbar).getByRole('button', { name: 'Background colour' }))
+    expect(screen.getByRole('menuitemradio', { name: 'Green' })).toHaveAttribute('aria-checked', 'true')
+    await user.click(screen.getByRole('menuitemradio', { name: 'No background' }))
+    expect(backgrounds()).toEqual([null, null, null, null])
+  })
+})
+
 describe('the toolbar hook', () => {
   const toolbar = () => screen.getByRole('toolbar', { name: 'Formatting' })
   // The toolbar's controls by accessible name, in order (the alignment group's buttons included).

@@ -10,6 +10,10 @@ export type ShownAlignment = 'left' | 'center' | 'right' | 'justify'
 // The text backgrounds the toolbar offers: light tints, so dark text stays readable on them.
 export const BACKGROUND_COLOURS = { yellow: '#fff59d', green: '#c8e6c9', blue: '#bbdefb', pink: '#f8bbd0', grey: '#e0e0e0' } as const
 export type BackgroundColour = keyof typeof BACKGROUND_COLOURS
+
+// The text colours the toolbar offers besides black (the page's own ink): the same hues as the
+// backgrounds, much darker, so they stay readable on white and on those backgrounds.
+export const TEXT_COLOURS = { yellow: '#7a5c00', green: '#1b5e20', blue: '#0d47a1', pink: '#880e4f', grey: '#424242' } as const satisfies Record<BackgroundColour, string>
 export type TableAction =
   | 'addRow'
   | 'addColumn'
@@ -65,6 +69,11 @@ export interface EditorLabels {
   readonly italicGlyph: string
   readonly underlineGlyph: string
   readonly colour: string
+  // The text colour menu: black (the page's ink, no colour of its own), then the darker hues.
+  readonly textColourNone: string
+  readonly textColours: Readonly<Record<BackgroundColour, string>>
+  // The last entry of both colour menus: the colour picker.
+  readonly customColour: string
   // The text background (highlight) menu: its name, « none », and its colours by name.
   readonly background: string
   readonly backgroundNone: string
@@ -125,6 +134,9 @@ export const DEFAULT_LABELS: EditorLabels = {
   italicGlyph: 'I',
   underlineGlyph: 'U',
   colour: 'Text colour',
+  textColourNone: 'Black',
+  textColours: { yellow: 'Dark yellow', green: 'Dark green', blue: 'Dark blue', pink: 'Dark pink', grey: 'Dark grey' },
+  customColour: 'Other colour…',
   background: 'Background colour',
   backgroundNone: 'No background',
   backgroundColours: { yellow: 'Yellow', green: 'Green', blue: 'Blue', pink: 'Pink', grey: 'Grey' },

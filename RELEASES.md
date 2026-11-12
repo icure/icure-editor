@@ -70,8 +70,8 @@
 
 - fix(editor): the toolbar sticks to the top and the selected reference floats under it
 
-## [MISSING] 0.5.2 (2026-11-12)
-<!-- tag: v0.5.2 | target: TAG_COMMIT | prerelease: false -->
+## 0.5.2 (2026-11-12)
+<!-- tag: v0.5.2 | target: c40fc85baeda7c641767f232ecd3ff653361d1f7 | prerelease: false -->
 
 - feat(editor): drop or paste an image file on the page (checked, then uploaded through the host's provider)
 - feat(editor): text background (highlight) menu, printed in the PDF

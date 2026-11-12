@@ -273,6 +273,26 @@ describe('the text colour menu', () => {
   })
 })
 
+describe('the colour menus of a document whose colours are not colours', () => {
+  it('show no swatch and no icon colour for a mark value outside the colour pattern', async () => {
+    const user = userEvent.setup()
+    const ref = createRef<DocumentEditorHandle>()
+    const hostile = 'url(https://example.invalid/x.png)'
+    const { container } = render(
+      <DocumentEditor ref={ref} initial={docJson(page(paragraph(text('Hello', [{ type: 'color', attrs: { color: hostile } }, { type: 'background', attrs: { background: hostile } }]))))} provider={provider()} />,
+    )
+    const view = ref.current!.view!
+    act(() => view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 3))))
+    const toolbar = screen.getByRole('toolbar', { name: 'Formatting' })
+    for (const name of ['Text colour', 'Background colour']) {
+      await user.click(within(toolbar).getByRole('button', { name }))
+      expect(screen.getAllByRole('menuitemradio')[0]).toHaveAttribute('aria-checked', 'true')
+      await user.keyboard('{Escape}')
+    }
+    expect(container.innerHTML).not.toContain('example.invalid')
+  })
+})
+
 describe('the background of table cells', () => {
   it('colours the SELECTED cells themselves, not their text, and takes it away again', async () => {
     const user = userEvent.setup()

@@ -31,7 +31,7 @@ import {
 import type { FieldDescriptor, RepeatSourceDescriptor, TemplateSummary } from '../context.ts'
 import { bodyTableRow, setRowZone } from '../editing.ts'
 import { BACKGROUND_COLOURS, TEXT_COLOURS, type BackgroundColour, type EditorLabels, type ShownAlignment, type TableAction } from '../labels.ts'
-import { editorSchema, FONT_SIZES, FONTS, ROW_ZONES, type TableLayout } from '../schema.ts'
+import { editorSchema, FONT_SIZES, FONTS, ROW_ZONES, safeColour, type TableLayout } from '../schema.ts'
 import { AlignIcon, BackgroundIcon, FieldIcon, TextColourIcon, ImageIcon, InsertTableIcon, RedoIcon, RepeatIcon, TableIcon, TemplateIcon, UndoIcon } from './icons.tsx'
 import { ColourMenu } from './ColourMenu.tsx'
 import { Menu, type MenuItem } from './Menu.tsx'
@@ -158,22 +158,27 @@ function defaultItems({ state, run, labels, fields, repeatSources, templates, on
     bold: () => <ToolButton label={labels.bold} glyph={labels.boldGlyph} active={isMarkActive(state, marks.strong)} onPress={() => run(toggleStrong)} />,
     italic: () => <ToolButton label={labels.italic} glyph={labels.italicGlyph} active={isMarkActive(state, marks.em)} onPress={() => run(toggleEm)} />,
     underline: () => <ToolButton label={labels.underline} glyph={labels.underlineGlyph} active={isMarkActive(state, marks.underlined)} onPress={() => run(toggleUnderline)} />,
-    colour: () => (
-      <ColourMenu
-        id="colour"
-        label={labels.colour}
-        icon={<TextColourIcon colour={styleMarkValue(state, marks.color, 'color')} />}
-        noneLabel={labels.textColourNone}
-        colours={(Object.entries(TEXT_COLOURS) as [BackgroundColour, string][]).map(([name, value]) => [labels.textColours[name], value] as const)}
-        customLabel={labels.customColour}
-        current={styleMarkValue(state, marks.color, 'color')}
-        onPick={(colour) => run(colour === null ? clearStyleMark(marks.color) : setStyleMark(marks.color, { color: colour }))}
-      />
-    ),
+    colour: () => {
+      // A loaded document's JSON is not sanitised: the mark's value passes the closed colour
+      // pattern before it styles the icon or a swatch.
+      const current = safeColour(styleMarkValue(state, marks.color, 'color'))
+      return (
+        <ColourMenu
+          id="colour"
+          label={labels.colour}
+          icon={<TextColourIcon colour={current} />}
+          noneLabel={labels.textColourNone}
+          colours={(Object.entries(TEXT_COLOURS) as [BackgroundColour, string][]).map(([name, value]) => [labels.textColours[name], value] as const)}
+          customLabel={labels.customColour}
+          current={current}
+          onPick={(colour) => run(colour === null ? clearStyleMark(marks.color) : setStyleMark(marks.color, { color: colour }))}
+        />
+      )
+    },
     background: () => {
       // Selected table cells take the background themselves; anything else, the text.
       const cells = state.selection instanceof CellSelection
-      const current = cells ? cellBackgroundOf(state) : styleMarkValue(state, marks.background, 'background')
+      const current = cells ? cellBackgroundOf(state) : safeColour(styleMarkValue(state, marks.background, 'background'))
       return (
         <ColourMenu
           id="background"

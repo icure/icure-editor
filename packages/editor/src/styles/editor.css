@@ -40,6 +40,9 @@
   --ie-editing-surface: var(--ie-page-surface);
   --ie-bar-surface: var(--ie-surface-raised);
   --ie-bar-ink: var(--ie-ink);
+  /* The toolbar dock: its distance from the top of the scrolling area, and its stacking layer. */
+  --ie-toolbar-top: 0px;
+  --ie-toolbar-layer: 5;
   /* On the page (light in both themes, like --ie-page-ink). */
   --ie-zone-caption-ink: #5d6066;
   --ie-zone-separator: #8a8f98;
@@ -278,13 +281,37 @@
   min-block-size: var(--ie-control);
 }
 
-/* The raw expression of the tapped reference (the touch alternative to the hover tooltip). */
+/* The toolbar and the selected reference: kept at the top of the scrolling area
+   (`--ie-toolbar-top`), above the pages and below the toolbar's own menus. */
+.ie-toolbar-dock {
+  position: sticky;
+  top: var(--ie-toolbar-top);
+  z-index: var(--ie-toolbar-layer);
+}
+
+/* The raw expression of the tapped reference (the touch alternative to the hover tooltip) floats just below the toolbar: it takes no room in the layout, and is not
+   drawn while nothing is selected. It never catches the pointer, so the page under it stays usable. */
 .ie-expression {
-  min-block-size: 1.2em;
-  margin: 0;
+  position: absolute;
+  top: calc(100% + var(--ie-space-xs));
+  inset-inline: 0;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  margin: 0 auto;
+  padding: var(--ie-space-2xs) var(--ie-space-sm);
+  overflow-wrap: anywhere;
+  border: 1px solid var(--ie-line);
+  border-radius: var(--ie-radius-md);
+  background: var(--ie-surface-raised);
+  box-shadow: var(--ie-shadow);
   color: var(--ie-ink-muted);
   font-family: var(--ie-font-mono);
   font-size: var(--ie-caption-size);
+  pointer-events: none;
+}
+
+.ie-expression:empty {
+  display: none;
 }
 
 .ie-message:empty {

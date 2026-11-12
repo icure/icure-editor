@@ -260,6 +260,24 @@ export const editorSchema = new Schema({
     size: styleMark('size', 'font-size', safeSize),
     color: styleMark('color', 'color', safeColour),
     font: styleMark('font', 'font-family', safeFont),
+    // A text background (highlight). Read from an INLINE span only: a table cell's own
+    // `background-color` is the cell's attribute, never a highlight of everything inside it.
+    background: {
+      attrs: { background: { default: '' } },
+      toDOM: (mark): DOMOutputSpec => {
+        const value = safeColour(mark.attrs.background)
+        return ['span', value ? { style: `background-color: ${value}` } : {}, 0]
+      },
+      parseDOM: [
+        {
+          tag: 'span',
+          getAttrs: (dom: HTMLElement) => {
+            const value = safeColour(dom.style.backgroundColor)
+            return value ? { background: value } : false
+          },
+        },
+      ],
+    },
   },
 })
 

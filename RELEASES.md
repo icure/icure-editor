@@ -69,3 +69,10 @@
 <!-- tag: v0.5.1 | target: abf50c58f5534110b54e4460f52b4dcf80512dea | prerelease: false -->
 
 - fix(editor): the toolbar sticks to the top and the selected reference floats under it
+
+## [MISSING] 0.5.2 (2026-11-12)
+<!-- tag: v0.5.2 | target: TAG_COMMIT | prerelease: false -->
+
+- feat(editor): drop or paste an image file on the page (checked, then uploaded through the host's provider)
+- feat(editor): text background (highlight) menu, printed in the PDF
+- feat(editor): the selected image's panel floats under the toolbar, on one line

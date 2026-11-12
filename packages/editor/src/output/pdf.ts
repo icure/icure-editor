@@ -44,6 +44,7 @@ function runNode(r: TextRun, fonts: Readonly<Record<string, string>>): DocNode {
     ...(r.underline ? { decoration: 'underline' } : {}),
     ...(r.sizePt ? { fontSize: r.sizePt } : {}),
     ...(r.color ? { color: r.color } : {}),
+    ...(r.background ? { background: r.background } : {}),
     ...(font ? { font } : {}),
   }
 }

@@ -6,6 +6,10 @@ import type { UnresolvedReason } from './context.ts'
 import type { RowZone } from './schema.ts'
 
 export type ShownAlignment = 'left' | 'center' | 'right' | 'justify'
+
+// The text backgrounds the toolbar offers: light tints, so dark text stays readable on them.
+export const BACKGROUND_COLOURS = { yellow: '#fff59d', green: '#c8e6c9', blue: '#bbdefb', pink: '#f8bbd0', grey: '#e0e0e0' } as const
+export type BackgroundColour = keyof typeof BACKGROUND_COLOURS
 export type TableAction =
   | 'addRow'
   | 'addColumn'
@@ -61,6 +65,10 @@ export interface EditorLabels {
   readonly italicGlyph: string
   readonly underlineGlyph: string
   readonly colour: string
+  // The text background (highlight) menu: its name, « none », and its colours by name.
+  readonly background: string
+  readonly backgroundNone: string
+  readonly backgroundColours: Readonly<Record<BackgroundColour, string>>
   readonly alignment: string
   readonly align: Readonly<Record<ShownAlignment, string>>
   readonly insertTable: string
@@ -117,6 +125,9 @@ export const DEFAULT_LABELS: EditorLabels = {
   italicGlyph: 'I',
   underlineGlyph: 'U',
   colour: 'Text colour',
+  background: 'Background colour',
+  backgroundNone: 'No background',
+  backgroundColours: { yellow: 'Yellow', green: 'Green', blue: 'Blue', pink: 'Pink', grey: 'Grey' },
   alignment: 'Alignment',
   align: { left: 'Align left', center: 'Centre', right: 'Align right', justify: 'Justify' },
   insertTable: 'Insert table',

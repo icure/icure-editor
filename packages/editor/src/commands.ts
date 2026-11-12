@@ -33,6 +33,22 @@ export function setStyleMark(type: MarkType, attrs: Record<string, string>): Com
   }
 }
 
+/** Removes a style mark (a colour, a background…) from the selection, or from what is typed next. */
+export function clearStyleMark(type: MarkType): Command {
+  return (state, dispatch) => {
+    const { from, to, empty } = state.selection
+    if (dispatch) dispatch(empty ? state.tr.removeStoredMark(type) : state.tr.removeMark(from, to, type))
+    return true
+  }
+}
+
+/** The value of a style mark at the selection (its start, or what is typed next), `null` without one. */
+export function styleMarkValue(state: EditorState, type: MarkType, attr: string): string | null {
+  const marks = state.storedMarks ?? state.selection.$from.marks()
+  const value = marks.find((mark) => mark.type === type)?.attrs[attr]
+  return typeof value === 'string' && value ? value : null
+}
+
 export type BlockStyle = 'paragraph' | 'heading1' | 'heading2' | 'heading3'
 export const BLOCK_STYLES: readonly BlockStyle[] = ['paragraph', 'heading1', 'heading2', 'heading3']
 

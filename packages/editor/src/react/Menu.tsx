@@ -16,6 +16,8 @@ export interface MenuItem {
   readonly set?: string
   readonly checked?: boolean
   readonly disabled?: boolean
+  // A colour shown before the label (decorative: the label names the choice).
+  readonly swatch?: string
   readonly onSelect: () => void
 }
 
@@ -142,6 +144,7 @@ export function Menu({ label, items, disabled = false, icon }: MenuProps) {
                   item.onSelect()
                 }}
               >
+                {item.swatch !== undefined && <span className="ie-swatch" aria-hidden="true" style={{ background: item.swatch }} />}
                 {item.label}
               </button>
             ))

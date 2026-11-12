@@ -205,6 +205,28 @@ describe('the Table menu', () => {
   })
 })
 
+describe('the background menu', () => {
+  it('puts a light background behind the selected text, says which one is current, and removes it', async () => {
+    const user = userEvent.setup()
+    const ref = createRef<DocumentEditorHandle>()
+    render(<DocumentEditor ref={ref} initial={docJson(page(paragraph(text('Hello'))))} provider={provider()} />)
+    const view = ref.current!.view!
+    act(() => view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 2, 7))))
+    const toolbar = screen.getByRole('toolbar', { name: 'Formatting' })
+    await user.click(within(toolbar).getByRole('button', { name: 'Background colour' }))
+    expect(screen.getByRole('menuitemradio', { name: 'No background' })).toHaveAttribute('aria-checked', 'true')
+    await user.click(screen.getByRole('menuitemradio', { name: 'Yellow' }))
+    const span = view.dom.querySelector<HTMLElement>('span[style*="background-color"]')
+    expect(span?.textContent).toBe('Hello')
+    expect(span?.style.backgroundColor).toBe('rgb(255, 245, 157)')
+
+    await user.click(within(toolbar).getByRole('button', { name: 'Background colour' }))
+    expect(screen.getByRole('menuitemradio', { name: 'Yellow' })).toHaveAttribute('aria-checked', 'true')
+    await user.click(screen.getByRole('menuitemradio', { name: 'No background' }))
+    expect(view.dom.querySelector('span[style*="background-color"]')).toBeNull()
+  })
+})
+
 describe('the toolbar hook', () => {
   const toolbar = () => screen.getByRole('toolbar', { name: 'Formatting' })
   // The toolbar's controls by accessible name, in order (the alignment group's buttons included).
@@ -214,12 +236,12 @@ describe('the toolbar hook', () => {
     const seen: string[][] = []
     render(<DocumentEditor initial={docJson(page(paragraph(text('Hello'))))} provider={provider({ listTemplates: () => [] })} customizeToolbar={(items) => (seen.push(items.map((i) => i.id)), items)} />)
     await within(toolbar()).findByRole('button', { name: 'Insert field' })
-    expect(seen.at(-1)).toEqual(['undo', 'redo', 'blockStyle', 'font', 'size', 'bold', 'italic', 'underline', 'colour', 'alignment', 'insertTable', 'tableMenu', 'insertField', 'insertBlock'])
+    expect(seen.at(-1)).toEqual(['undo', 'redo', 'blockStyle', 'font', 'size', 'bold', 'italic', 'underline', 'colour', 'background', 'alignment', 'insertTable', 'tableMenu', 'insertField', 'insertBlock'])
   })
 
   it('removes and reorders the built-in controls', () => {
     const customize: CustomizeToolbar = (items) => {
-      const kept = items.filter((i) => !['font', 'size', 'colour', 'alignment', 'tableMenu', 'blockStyle'].includes(i.id))
+      const kept = items.filter((i) => !['font', 'size', 'colour', 'background', 'alignment', 'tableMenu', 'blockStyle'].includes(i.id))
       return [...kept.filter((i) => i.id === 'insertTable'), ...kept.filter((i) => i.id !== 'insertTable')]
     }
     render(<DocumentEditor initial={docJson(page(paragraph(text('Hello'))))} provider={provider({ listFields: () => [], listRepeatSources: () => [], listTemplates: () => [] })} customizeToolbar={customize} />)

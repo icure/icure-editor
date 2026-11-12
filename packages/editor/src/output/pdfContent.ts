@@ -35,6 +35,8 @@ export interface TextRun {
   readonly underline?: boolean
   readonly sizePt?: number
   readonly color?: string
+  // The text background (highlight).
+  readonly background?: string
   // The editor's font name (see PdfDefinitionOptions.fonts for how it maps to an embedded font).
   readonly font?: string
 }
@@ -125,7 +127,8 @@ function runOf(text: string, nodeMarks: readonly Mark[]): TextRun {
   const size = sizeOf(has(marks.size)?.attrs.size)
   const color = safeColour(has(marks.color)?.attrs.color)
   const font = safeFont(has(marks.font)?.attrs.font)
-  return { text, ...(has(marks.strong) ? { bold: true } : {}), ...(has(marks.em) ? { italic: true } : {}), ...(has(marks.underlined) ? { underline: true } : {}), ...(size ? { sizePt: size } : {}), ...(color ? { color } : {}), ...(font ? { font } : {}) }
+  const background = safeColour(has(marks.background)?.attrs.background)
+  return { ...(background ? { background } : {}), text, ...(has(marks.strong) ? { bold: true } : {}), ...(has(marks.em) ? { italic: true } : {}), ...(has(marks.underlined) ? { underline: true } : {}), ...(size ? { sizePt: size } : {}), ...(color ? { color } : {}), ...(font ? { font } : {}) }
 }
 
 function imageBlock(node: ProseNode, resolution: Resolution, maxWidthPt: number, align: PdfAlignment | undefined): PdfBlock | null {

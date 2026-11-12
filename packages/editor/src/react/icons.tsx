@@ -40,6 +40,14 @@ export const AlignIcon = ({ align }: { readonly align: ShownAlignment }) => (
   </Icon>
 )
 
+// A marker over a bar: the text background.
+export const BackgroundIcon = () => (
+  <Icon>
+    <path d="m9 11-6 6v3h9l3-3" />
+    <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
+  </Icon>
+)
+
 export const InsertTableIcon = () => (
   <Icon>
     <path d="M13 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8" />

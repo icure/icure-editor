@@ -13,10 +13,35 @@ test.describe('fields', () => {
     await expect(canvas(page)).toContainText(expression('preference.value:Newsletter'))
   })
 
-  test('shows the expression of a tapped field under the toolbar', async ({ page }) => {
+  test('shows the expression of a tapped field floating under the toolbar, taking no room', async ({ page }) => {
+    // Nothing selected (an empty document): no reference is drawn.
+    await open(page, 'blank')
+    await focusEnd(page)
+    await expect(page.locator('.ie-expression')).toBeHidden()
+
     await open(page, 'welcome-letter')
     await canvas(page).locator('.ie-field[data-field="recipient.memberNumber"]').click()
-    await expect(page.getByText(L.selectedExpression(expression('recipient.memberNumber')))).toBeVisible()
+    const line = page.getByText(L.selectedExpression(expression('recipient.memberNumber')))
+    await expect(line).toBeVisible()
+    // It floats: the toolbar's dock is no taller than the toolbar, so nothing below makes room for it.
+    const dockHeight = await page.locator('.ie-toolbar-dock').evaluate((el) => el.getBoundingClientRect().height)
+    expect(dockHeight).toBeCloseTo((await toolbar(page).boundingBox())?.height ?? Number.NaN, 0)
+    const below = async () => {
+      const bar = await toolbar(page).boundingBox()
+      const box = await line.boundingBox()
+      return bar && box ? box.y - (bar.y + bar.height) : Number.NaN
+    }
+    const gap = await below()
+    expect(gap).toBeGreaterThanOrEqual(0)
+    expect(gap).toBeLessThan(16)
+
+    // Scrolled down, it stays just below the toolbar.
+    await page.evaluate(() => {
+      let scroller: HTMLElement | null = document.querySelector('.ie-sheets')
+      while (scroller && scroller.scrollHeight <= scroller.clientHeight) scroller = scroller.parentElement
+      ;(scroller ?? document.scrollingElement)?.scrollBy(0, 300)
+    })
+    expect(await below()).toBeCloseTo(gap, 0)
   })
 
   test('inserts a field from the menu and fills it at once', async ({ page }) => {

@@ -386,11 +386,18 @@ export function DocumentEditor(props: DocumentEditorProps) {
 
   return (
     <div className={['ie-editor', className].filter(Boolean).join(' ')} style={pageStyle}>
-      {!readOnly && activeState && (
-        <Toolbar state={activeState} run={run} labels={labels} fields={fields} repeatSources={offers.repeatSources} templates={templates} onInsertImage={onInsertImage} tableCommands={TABLE_COMMANDS} undo={undo} redo={redo} customize={customizeToolbar}>
-          {toolbarExtras}
-        </Toolbar>
-      )}
+      {/* The toolbar and the selected reference travel together: the dock stays at the top of the
+          scrolling area, and the reference floats just below the toolbar, taking no room of its own. */}
+      <div className="ie-toolbar-dock">
+        {!readOnly && activeState && (
+          <Toolbar state={activeState} run={run} labels={labels} fields={fields} repeatSources={offers.repeatSources} templates={templates} onInsertImage={onInsertImage} tableCommands={TABLE_COMMANDS} undo={undo} redo={redo} customize={customizeToolbar}>
+            {toolbarExtras}
+          </Toolbar>
+        )}
+        <p className="ie-expression" aria-live="polite">
+          {selected ? labels.selectedExpression(expression(selected)) : null}
+        </p>
+      </div>
       {!readOnly && imageProvider?.upload && !imageProvider.pick && (
         <input
           ref={fileInput}
@@ -412,9 +419,6 @@ export function DocumentEditor(props: DocumentEditorProps) {
         </label>
         {showUnresolved && <UnresolvedChip entries={resolution.unresolved} labels={labels.unresolved} />}
       </div>
-      <p className="ie-expression" aria-live="polite">
-        {selected ? labels.selectedExpression(expression(selected)) : ''}
-      </p>
       <div aria-live="polite" className="ie-message">
         {imageMessage}
       </div>

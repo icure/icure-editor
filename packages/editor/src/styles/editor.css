@@ -111,8 +111,7 @@
 
 /* Target size: 44px by default (touch), 24px+ with a fine pointer that can hover. */
 .ie-button,
-.ie-select,
-.ie-colour {
+.ie-select {
   box-sizing: border-box;
   min-block-size: var(--ie-control);
   min-inline-size: var(--ie-control);
@@ -139,11 +138,29 @@
 
 .ie-button:focus-visible,
 .ie-select:focus-visible,
-.ie-colour:focus-visible,
 .ie-chip:focus-visible,
 .ie-menu-item:focus-visible {
   outline: 2px solid var(--ie-focus);
   outline-offset: 2px;
+}
+
+/* A colour menu and its picker: the picker is rendered (a browser opens only a rendered one) but
+   invisible, under the menu's button, where the browser draws its dialog. */
+.ie-colour-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.ie-colour-picker {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .ie-swatch {
@@ -174,10 +191,6 @@
   display: block;
   inline-size: var(--ie-icon-size);
   block-size: var(--ie-icon-size);
-}
-
-.ie-colour {
-  padding: 2px;
 }
 
 /* The name of an icon-only control, under it; a bridge keeps it while the pointer moves onto it. */

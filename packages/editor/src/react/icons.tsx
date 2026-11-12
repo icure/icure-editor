@@ -40,11 +40,24 @@ export const AlignIcon = ({ align }: { readonly align: ShownAlignment }) => (
   </Icon>
 )
 
-// A marker over a bar: the text background.
-export const BackgroundIcon = () => (
+// A bar under the glyph, in the colour currently set (the ink when there is none).
+const ColourBar = ({ colour }: { readonly colour: string | null }) => <rect x="3" y="19" width="18" height="3" rx="1" fill={colour ?? 'currentColor'} stroke="none" />
+
+// A letter over a bar: the text colour.
+export const TextColourIcon = ({ colour }: { readonly colour: string | null }) => (
   <Icon>
-    <path d="m9 11-6 6v3h9l3-3" />
-    <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
+    <path d="M7 15 12 3l5 12" />
+    <path d="M9 10.5h6" />
+    <ColourBar colour={colour} />
+  </Icon>
+)
+
+// A marker over a bar: the background.
+export const BackgroundIcon = ({ colour }: { readonly colour: string | null }) => (
+  <Icon>
+    <path d="m13 3 5 5-7 7H6v-5z" />
+    <path d="m10 6 5 5" />
+    <ColourBar colour={colour} />
   </Icon>
 )
 

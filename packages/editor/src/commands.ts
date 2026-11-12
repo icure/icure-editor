@@ -8,7 +8,7 @@ import { CellSelection, deleteTable, selectionCell } from 'prosemirror-tables'
 import type { RepeatSourceDescriptor } from './context.ts'
 import { fieldKey, imageKey, repeatKey, templateKey } from './document.ts'
 import { clampImageWidth, safeAltText, safeEmbeddedImageSrc, safeImageId } from './images.ts'
-import { cellSides, DEFAULT_BORDERS, editorSchema, safeAlignment, safeBorders, safeIdentifier, safeLayout, type Alignment, type TableLayout } from './schema.ts'
+import { cellSides, DEFAULT_BORDERS, editorSchema, safeAlignment, safeBorders, safeColour, safeIdentifier, safeLayout, type Alignment, type TableLayout } from './schema.ts'
 
 const { nodes, marks } = editorSchema
 
@@ -120,6 +120,30 @@ export const setCellBorders =
     }
     return true
   }
+
+// The background of the SELECTED cells (a cell selection), or none (`null`). A caret or text
+// inside a cell is not a cell selection: the toolbar's background then goes on the text.
+export const setCellBackground =
+  (colour: string | null): Command =>
+  (state, dispatch) => {
+    if (!(state.selection instanceof CellSelection)) return false
+    const value = colour === null ? null : safeColour(colour)
+    if (colour !== null && value === null) return false
+    if (dispatch) {
+      const tr = state.tr
+      state.selection.forEachCell((cell, pos) => {
+        if (cell.attrs.background !== value) tr.setNodeMarkup(pos, undefined, { ...cell.attrs, background: value })
+      })
+      dispatch(tr)
+    }
+    return true
+  }
+
+// The background of a cell selection's head cell; null without one, or outside a cell selection.
+export function cellBackgroundOf(state: EditorState): string | null {
+  if (!(state.selection instanceof CellSelection)) return null
+  return safeColour(state.selection.$headCell.nodeAfter?.attrs.background)
+}
 
 // The cell of the selection (a cell selection's head cell), or null outside a table
 // (prosemirror-tables' `selectionCell` throws there).

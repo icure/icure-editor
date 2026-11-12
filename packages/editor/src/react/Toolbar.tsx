@@ -2,12 +2,14 @@
 // alignment, tables, fields, repeating blocks, embedded templates and images. Each control is an
 // item with an id; the host may remove, reorder, wrap or add items (customize).
 import type { Command, EditorState } from 'prosemirror-state'
+import { CellSelection } from 'prosemirror-tables'
 import { Fragment, type ReactNode } from 'react'
 
 import {
   alignmentOf,
   BLOCK_STYLES,
   blockStyleOf,
+  cellBackgroundOf,
   cellSidesOf,
   insertField,
   insertRepeat,
@@ -16,6 +18,7 @@ import {
   isMarkActive,
   setAlignment,
   setBlockStyle,
+  setCellBackground,
   clearStyleMark,
   setStyleMark,
   styleMarkValue,
@@ -27,9 +30,10 @@ import {
 } from '../commands.ts'
 import type { FieldDescriptor, RepeatSourceDescriptor, TemplateSummary } from '../context.ts'
 import { bodyTableRow, setRowZone } from '../editing.ts'
-import { BACKGROUND_COLOURS, type BackgroundColour, type EditorLabels, type ShownAlignment, type TableAction } from '../labels.ts'
+import { BACKGROUND_COLOURS, TEXT_COLOURS, type BackgroundColour, type EditorLabels, type ShownAlignment, type TableAction } from '../labels.ts'
 import { editorSchema, FONT_SIZES, FONTS, ROW_ZONES, type TableLayout } from '../schema.ts'
-import { AlignIcon, BackgroundIcon, FieldIcon, ImageIcon, InsertTableIcon, RedoIcon, RepeatIcon, TableIcon, TemplateIcon, UndoIcon } from './icons.tsx'
+import { AlignIcon, BackgroundIcon, FieldIcon, TextColourIcon, ImageIcon, InsertTableIcon, RedoIcon, RepeatIcon, TableIcon, TemplateIcon, UndoIcon } from './icons.tsx'
+import { ColourMenu } from './ColourMenu.tsx'
 import { Menu, type MenuItem } from './Menu.tsx'
 import { Tooltip } from './Tooltip.tsx'
 
@@ -54,8 +58,6 @@ function tableItems(state: EditorState, run: (command: Command) => void, labels:
     return item
   })
 }
-// The colour picker's starting value (the picker needs a hex value).
-const DEFAULT_INK = '#000000'
 
 // The built-in controls, in their default order.
 export const TOOLBAR_ITEM_IDS = ['undo', 'redo', 'blockStyle', 'font', 'size', 'bold', 'italic', 'underline', 'colour', 'background', 'alignment', 'insertTable', 'tableMenu', 'insertField', 'insertBlock', 'insertTemplate', 'insertImage'] as const
@@ -157,25 +159,35 @@ function defaultItems({ state, run, labels, fields, repeatSources, templates, on
     italic: () => <ToolButton label={labels.italic} glyph={labels.italicGlyph} active={isMarkActive(state, marks.em)} onPress={() => run(toggleEm)} />,
     underline: () => <ToolButton label={labels.underline} glyph={labels.underlineGlyph} active={isMarkActive(state, marks.underlined)} onPress={() => run(toggleUnderline)} />,
     colour: () => (
-      <Tooltip text={labels.colour}>
-        <input type="color" className="ie-colour" aria-label={labels.colour} defaultValue={DEFAULT_INK} onChange={(e) => run(setStyleMark(marks.color, { color: e.target.value }))} />
-      </Tooltip>
+      <ColourMenu
+        id="colour"
+        label={labels.colour}
+        icon={<TextColourIcon colour={styleMarkValue(state, marks.color, 'color')} />}
+        noneLabel={labels.textColourNone}
+        colours={(Object.entries(TEXT_COLOURS) as [BackgroundColour, string][]).map(([name, value]) => [labels.textColours[name], value] as const)}
+        customLabel={labels.customColour}
+        current={styleMarkValue(state, marks.color, 'color')}
+        onPick={(colour) => run(colour === null ? clearStyleMark(marks.color) : setStyleMark(marks.color, { color: colour }))}
+      />
     ),
     background: () => {
-      const current = styleMarkValue(state, marks.background, 'background')
-      const colours = Object.entries(BACKGROUND_COLOURS) as [BackgroundColour, string][]
-      const items: MenuItem[] = [
-        { id: 'background-none', label: labels.backgroundNone, set: 'background', checked: current === null, onSelect: () => run(clearStyleMark(marks.background)) },
-        ...colours.map(([name, value]) => ({
-          id: `background-${name}`,
-          label: labels.backgroundColours[name],
-          set: 'background',
-          checked: current === value,
-          swatch: value,
-          onSelect: () => run(setStyleMark(marks.background, { background: value })),
-        })),
-      ]
-      return <Menu label={labels.background} icon={<BackgroundIcon />} items={items} />
+      // Selected table cells take the background themselves; anything else, the text.
+      const cells = state.selection instanceof CellSelection
+      const current = cells ? cellBackgroundOf(state) : styleMarkValue(state, marks.background, 'background')
+      return (
+        <ColourMenu
+          id="background"
+          label={labels.background}
+          icon={<BackgroundIcon colour={current} />}
+          noneLabel={labels.backgroundNone}
+          colours={(Object.entries(BACKGROUND_COLOURS) as [BackgroundColour, string][]).map(([name, value]) => [labels.backgroundColours[name], value] as const)}
+          customLabel={labels.customColour}
+          current={current}
+          onPick={(colour) =>
+            run(cells ? setCellBackground(colour) : colour === null ? clearStyleMark(marks.background) : setStyleMark(marks.background, { background: colour }))
+          }
+        />
+      )
     },
     alignment: () => (
       <div role="group" aria-label={labels.alignment} className="ie-group">

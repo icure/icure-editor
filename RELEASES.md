@@ -76,3 +76,9 @@
 - feat(editor): drop or paste an image file on the page (checked, then uploaded through the host's provider)
 - feat(editor): text background (highlight) menu, printed in the PDF
 - feat(editor): the selected image's panel floats under the toolbar, on one line
+
+## [MISSING] 0.5.3 (2026-11-12)
+<!-- tag: v0.5.3 | target: <TAG COMMIT> | prerelease: false -->
+
+- feat(editor): text colour menu (black, darker hues, then a colour picker applied once confirmed)
+- feat(editor): the background menu colours selected table cells themselves; both colour menus end with a colour picker

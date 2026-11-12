@@ -52,6 +52,15 @@ describe('PDF output', () => {
     expect(unresolved).toEqual({ kind: 'paragraph', runs: [] })
   })
 
+  it('prints a text background behind its run', () => {
+    const highlighted = doc(page(paragraph(text('marked', [{ type: 'background', attrs: { background: '#fff59d' } }]))))
+    const content = toPdfContent(highlighted, resolution, { title: 'Highlight', createdAt: AT })
+    const [block] = content.blocks
+    expect(block?.kind === 'paragraph' ? block.runs : []).toEqual([{ text: 'marked', background: '#fff59d' }])
+    const definition = toPdfDefinition(content)
+    expect(JSON.stringify(definition)).toContain('"background":"#fff59d"')
+  })
+
   it('closes with a footer line when asked', () => {
     const content = toPdfContent(LETTER, resolution, { title: 'Confirmation', footer: 'Issued by the front desk', createdAt: AT })
     expect(content.blocks.at(-1)).toEqual({ kind: 'paragraph', runs: [{ text: 'Issued by the front desk', italic: true }], size: 8 })

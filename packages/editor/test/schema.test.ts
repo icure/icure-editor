@@ -57,6 +57,28 @@ describe('cell borders and layout tables', () => {
   })
 })
 
+describe('the text background', () => {
+  it('reads a pasted highlight from an inline span, never from a table cell’s own background', () => {
+    const highlighted = parse('<p>a <span style="background-color: #fff59d">b</span></p>')
+    const marks = highlighted.child(0).child(0).child(1).marks
+    expect(marks.map((mark) => [mark.type.name, mark.attrs.background])).toEqual([['background', 'rgb(255, 245, 157)']])
+
+    const cellOnly = parse('<table><tr><td style="background-color: #ffcc00"><p>c</p></td></tr></table>')
+    let highlights = 0
+    cellOnly.descendants((node) => {
+      highlights += node.marks.filter((mark) => mark.type.name === 'background').length
+    })
+    expect(highlights).toBe(0)
+  })
+
+  it('drops a background that is not a plain colour', () => {
+    const hostile = parse('<p><span style="background-color: url(https://tracker.example/x.png)">d</span></p>')
+    hostile.descendants((node) => {
+      expect(node.marks.some((mark) => mark.type.name === 'background')).toBe(false)
+    })
+  })
+})
+
 describe('the schema as the only parser of pasted HTML', () => {
   it('parses a pasted block without zones into a valid body', () => {
     const node = parse('<div class="ie-page"><div class="ie-repeat" data-source="list.items"><p>a</p></div></div>')

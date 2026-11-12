@@ -16,7 +16,9 @@ import {
   isMarkActive,
   setAlignment,
   setBlockStyle,
+  clearStyleMark,
   setStyleMark,
+  styleMarkValue,
   tableLayoutOf,
   toggleEm,
   toggleStrong,
@@ -25,9 +27,9 @@ import {
 } from '../commands.ts'
 import type { FieldDescriptor, RepeatSourceDescriptor, TemplateSummary } from '../context.ts'
 import { bodyTableRow, setRowZone } from '../editing.ts'
-import type { EditorLabels, ShownAlignment, TableAction } from '../labels.ts'
+import { BACKGROUND_COLOURS, type BackgroundColour, type EditorLabels, type ShownAlignment, type TableAction } from '../labels.ts'
 import { editorSchema, FONT_SIZES, FONTS, ROW_ZONES, type TableLayout } from '../schema.ts'
-import { AlignIcon, FieldIcon, ImageIcon, InsertTableIcon, RedoIcon, RepeatIcon, TableIcon, TemplateIcon, UndoIcon } from './icons.tsx'
+import { AlignIcon, BackgroundIcon, FieldIcon, ImageIcon, InsertTableIcon, RedoIcon, RepeatIcon, TableIcon, TemplateIcon, UndoIcon } from './icons.tsx'
 import { Menu, type MenuItem } from './Menu.tsx'
 import { Tooltip } from './Tooltip.tsx'
 
@@ -56,7 +58,7 @@ function tableItems(state: EditorState, run: (command: Command) => void, labels:
 const DEFAULT_INK = '#000000'
 
 // The built-in controls, in their default order.
-export const TOOLBAR_ITEM_IDS = ['undo', 'redo', 'blockStyle', 'font', 'size', 'bold', 'italic', 'underline', 'colour', 'alignment', 'insertTable', 'tableMenu', 'insertField', 'insertBlock', 'insertTemplate', 'insertImage'] as const
+export const TOOLBAR_ITEM_IDS = ['undo', 'redo', 'blockStyle', 'font', 'size', 'bold', 'italic', 'underline', 'colour', 'background', 'alignment', 'insertTable', 'tableMenu', 'insertField', 'insertBlock', 'insertTemplate', 'insertImage'] as const
 export type ToolbarItemId = (typeof TOOLBAR_ITEM_IDS)[number]
 
 // One control of the toolbar: a built-in one (its id is a ToolbarItemId) or the host's own.
@@ -159,6 +161,22 @@ function defaultItems({ state, run, labels, fields, repeatSources, templates, on
         <input type="color" className="ie-colour" aria-label={labels.colour} defaultValue={DEFAULT_INK} onChange={(e) => run(setStyleMark(marks.color, { color: e.target.value }))} />
       </Tooltip>
     ),
+    background: () => {
+      const current = styleMarkValue(state, marks.background, 'background')
+      const colours = Object.entries(BACKGROUND_COLOURS) as [BackgroundColour, string][]
+      const items: MenuItem[] = [
+        { id: 'background-none', label: labels.backgroundNone, set: 'background', checked: current === null, onSelect: () => run(clearStyleMark(marks.background)) },
+        ...colours.map(([name, value]) => ({
+          id: `background-${name}`,
+          label: labels.backgroundColours[name],
+          set: 'background',
+          checked: current === value,
+          swatch: value,
+          onSelect: () => run(setStyleMark(marks.background, { background: value })),
+        })),
+      ]
+      return <Menu label={labels.background} icon={<BackgroundIcon />} items={items} />
+    },
     alignment: () => (
       <div role="group" aria-label={labels.alignment} className="ie-group">
         {SHOWN_ALIGNMENTS.map((align) => (

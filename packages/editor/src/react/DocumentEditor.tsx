@@ -5,7 +5,7 @@
 // lives in memory only: the host decides what to persist (onEdit).
 import { redo, undo } from 'prosemirror-history'
 import type { Node as ProseNode } from 'prosemirror-model'
-import { EditorState, NodeSelection, type Command } from 'prosemirror-state'
+import { EditorState, NodeSelection, TextSelection, type Command } from 'prosemirror-state'
 import { addColumnAfter, addRowAfter, deleteColumn, deleteRow } from 'prosemirror-tables'
 import { EditorView } from 'prosemirror-view'
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react'
@@ -215,6 +215,9 @@ export function DocumentEditor(props: DocumentEditorProps) {
   }, [latest])
   const activeView = useCallback(() => mainLevel.innermost()?.view ?? viewRef.current, [mainLevel])
 
+  // A file dropped on or pasted into the page, handed to the image button's own path (set below).
+  const takeImageFile = useRef<((file: File) => void) | null>(null)
+
   // The parse error, if the initial content doesn't fit the schema (shown, never half-parsed).
   const [parsed] = useState((): ProseNode | Error => {
     try {
@@ -266,6 +269,25 @@ export function DocumentEditor(props: DocumentEditorProps) {
     if (readOnly) mainLevel.closeAll()
     view.setProps({
       nodeViews: nodeViews({ resolution, showExpressions, labels, editing: readOnly ? null : mainLevel }),
+      // An image FILE dropped or pasted goes where the image button's file goes: checked (type, size,
+      // magic numbers), then to the host's `upload` — nothing without one. Anything else (text, HTML, a
+      // move within the document) keeps the editor's own handling.
+      handleDrop: (target, event, _slice, moved) => {
+        const file = !moved && !readOnly ? imageFileOf(event.dataTransfer) : null
+        if (!file || !takeImageFile.current) return false
+        event.preventDefault()
+        const at = target.posAtCoords({ left: event.clientX, top: event.clientY })
+        if (at) target.dispatch(target.state.tr.setSelection(TextSelection.near(target.state.doc.resolve(at.pos))))
+        takeImageFile.current(file)
+        return true
+      },
+      handlePaste: (_target, event) => {
+        const file = !readOnly ? imageFileOf(event.clipboardData) : null
+        if (!file || !takeImageFile.current) return false
+        event.preventDefault()
+        takeImageFile.current(file)
+        return true
+      },
       // Frozen while a block is open: the edits go to its editing area.
       editable: () => !readOnly && !mainLevel.session,
       attributes: { 'aria-label': labels.canvas, 'aria-multiline': 'true', role: 'textbox', 'aria-readonly': String(readOnly), class: 'ie-canvas' },
@@ -353,6 +375,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
 
   const onFile = async (file: File | undefined) => {
     if (!file || !imageProvider?.upload) return
+    setImageMessage(null)
     const problem: ImageFileError | null = await checkImageFile(file, imageRules)
     if (problem) return setImageMessage(labels.image.errors[problem])
     setImageMessage(labels.image.uploading)
@@ -363,6 +386,9 @@ export function DocumentEditor(props: DocumentEditorProps) {
       setImageMessage(labels.image.errors.upload)
     }
   }
+  useEffect(() => {
+    takeImageFile.current = imageProvider?.upload ? (file) => void onFile(file) : null
+  })
 
   // The open blocks, outermost first; the toolbar shows the innermost one's state.
   const sessions: InlineSession[] = []
@@ -387,16 +413,20 @@ export function DocumentEditor(props: DocumentEditorProps) {
   return (
     <div className={['ie-editor', className].filter(Boolean).join(' ')} style={pageStyle}>
       {/* The toolbar and the selected reference travel together: the dock stays at the top of the
-          scrolling area, and the reference floats just below the toolbar, taking no room of its own. */}
+          scrolling area; the reference and the selected image's panel float just below the toolbar, taking no room. */}
       <div className="ie-toolbar-dock">
         {!readOnly && activeState && (
           <Toolbar state={activeState} run={run} labels={labels} fields={fields} repeatSources={offers.repeatSources} templates={templates} onInsertImage={onInsertImage} tableCommands={TABLE_COMMANDS} undo={undo} redo={redo} customize={customizeToolbar}>
             {toolbarExtras}
           </Toolbar>
         )}
-        <p className="ie-expression" aria-live="polite">
-          {selected ? labels.selectedExpression(expression(selected)) : null}
-        </p>
+        {/* What floats under the toolbar, taking no room: the selected reference, then the image's panel. */}
+        <div className="ie-dock-floats">
+          <p className="ie-expression" aria-live="polite">
+            {selected ? labels.selectedExpression(expression(selected)) : null}
+          </p>
+          {image && <ImagePanel node={image.node} labels={labels.image} altRef={altInput} onChange={(attrs) => run(updateSelectedImage(attrs), false)} />}
+        </div>
       </div>
       {!readOnly && imageProvider?.upload && !imageProvider.pick && (
         <input
@@ -422,10 +452,14 @@ export function DocumentEditor(props: DocumentEditorProps) {
       <div aria-live="polite" className="ie-message">
         {imageMessage}
       </div>
-      {image && <ImagePanel node={image.node} labels={labels.image} altRef={altInput} onChange={(attrs) => run(updateSelectedImage(attrs), false)} />}
       <div className="ie-sheets" data-show-expressions={showExpressions || undefined}>
         <div ref={host} />
       </div>
     </div>
   )
+}
+
+/** The first image file carried by a drop or a paste, if any — the type is checked again on upload. */
+function imageFileOf(data: DataTransfer | null): File | null {
+  return Array.from(data?.files ?? []).find((file) => file.type.startsWith('image/')) ?? null
 }

@@ -35,6 +35,7 @@ export {
   alignmentOf,
   BLOCK_STYLES,
   blockStyleOf,
+  clearStyleMark,
   insertField,
   insertImage,
   insertRepeat,
@@ -48,6 +49,7 @@ export {
   setAlignment,
   setBlockStyle,
   setStyleMark,
+  styleMarkValue,
   toggleEm,
   toggleStrong,
   toggleUnderline,
@@ -79,7 +81,7 @@ export {
 } from './images.ts'
 
 // Labels.
-export { DEFAULT_LABELS, mergeLabels, type EditorLabels, type InlineEditingLabels, type PartialLabels, type ShownAlignment, type TableAction } from './labels.ts'
+export { BACKGROUND_COLOURS, DEFAULT_LABELS, mergeLabels, type BackgroundColour, type EditorLabels, type InlineEditingLabels, type PartialLabels, type ShownAlignment, type TableAction } from './labels.ts'
 
 // Output.
 export { createSerializer, htmlDocumentCss, toHtml, toHtmlDocument, toHtmlFragment, type HtmlDocumentOptions, type HtmlOptions, type SerializerOptions } from './output/html.ts'
@@ -92,5 +94,7 @@ export { documentFileName, downloadBytes, fileDay, HTML_TYPE, PDF_TYPE, printPdf
 export { DocumentEditor, type DocumentEditorHandle, type DocumentEditorProps } from './react/DocumentEditor.tsx'
 export { ToolButton, Toolbar, TOOLBAR_ITEM_IDS, type CustomizeToolbar, type ToolbarContext, type ToolbarItem, type ToolbarItemId, type ToolbarProps, type ToolButtonProps } from './react/Toolbar.tsx'
 export { Menu, type MenuItem } from './react/Menu.tsx'
+// The toolbar's alignment icons, for a host drawing its own alignment control.
+export { AlignIcon } from './react/icons.tsx'
 export { UnresolvedChip, type UnresolvedChipProps } from './react/UnresolvedChip.tsx'
 export { ImagePanel, type ImagePanelProps } from './react/ImagePanel.tsx'
